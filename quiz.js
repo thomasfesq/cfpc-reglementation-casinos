@@ -67,6 +67,15 @@
     return raw;
   }
 
+  function officialLink(question, label = question.article) {
+    const anchor = element("a", "source-link", label);
+    anchor.href = sourceUrl(question.url);
+    anchor.target = "_blank";
+    anchor.rel = "noopener noreferrer";
+    anchor.append(element("span", "sr-only", " (nouvel onglet)"));
+    return anchor;
+  }
+
   if (!questions) {
     const {header} = titleBlock("Quiz indisponible", "Le catalogue de questions n’a pas pu être chargé.");
     storageStatus.textContent = "";
@@ -169,25 +178,48 @@
     copy.append(
       element("p", "eyebrow", "Quiz de formation"),
       heading,
-      element("p", "", "Testez vos connaissances du cadre français. Chaque correction renvoie au texte officiel.")
+      element("p", "", "À l’entrée, à une table ou en salle, quelle décision prendre ? Entraînez-vous sur des situations de travail, puis retrouvez le texte qui justifie chaque réponse.")
     );
     const actions = element("div", "actions");
     if (!attempt) actions.append(button("Commencer le quiz", "primary", start));
     else if (attempt.phase === "active") actions.append(button("Reprendre le quiz", "primary", () => showQuestion(true)));
     else actions.append(button("Voir le bilan", "primary", showSummary));
-    copy.append(actions);
-    hero.append(copy, stats([
+    const browse = element("a", "hero-link", "Explorer les thèmes");
+    browse.href = "#themes";
+    actions.append(browse);
+    copy.append(actions, stats([
       ["Questions", questions.length],
       ["Thèmes", topicTotals.size],
       ...(attempt ? [["Répondues", countAnswered() + " sur " + questions.length]] : []),
     ]));
+    const photo = element("img", "hero-photo");
+    photo.src = "./assets/hero-learning.webp";
+    photo.alt = "";
+    hero.append(copy, photo);
 
     const topics = element("section", "themes");
-    topics.append(element("h2", "section-title", "Thèmes abordés"));
+    topics.id = "themes";
+    topics.tabIndex = -1;
+    topics.append(element("h2", "section-title", "Thèmes et textes officiels"));
     const list = element("ul", "theme-list");
     for (const [theme, {total}] of topicTotals) {
-      const item = element("li", "", theme);
-      item.append(element("span", "", numberLabel(total, "question", "questions")));
+      const item = element("li");
+      const disclosure = element("details", "topic");
+      const summary = element("summary");
+      summary.append(element("strong", "", theme), element("small", "", numberLabel(total, "question", "questions")));
+      const sources = element("ul", "source-list");
+      const unique = new Set();
+      for (const question of questions.filter(q => q.theme === theme)) {
+        if (unique.has(question.url)) continue;
+        unique.add(question.url);
+        const row = element("li");
+        const label = question.url === "https://interdictiondejeux.anj.fr/demande-interdiction/presentation"
+          ? "ANJ · Interdiction volontaire de jeux" : question.article;
+        row.append(officialLink(question, label));
+        sources.append(row);
+      }
+      disclosure.append(summary, sources);
+      item.append(disclosure);
       list.append(item);
     }
     topics.append(list);
@@ -261,11 +293,7 @@
     card.setAttribute("aria-labelledby", "titre-correction");
     const heading = element("h3", "", choice === question.answer ? "Bonne réponse" : "Réponse incorrecte");
     heading.id = "titre-correction";
-    const link = element("a", "", "Texte officiel · " + question.article);
-    link.href = sourceUrl(question.url);
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.append(element("span", "sr-only", " (nouvel onglet)"));
+    const link = officialLink(question, "Texte officiel · " + question.article);
     card.append(heading, element("p", "", question.explanation), link);
     return card;
   }
