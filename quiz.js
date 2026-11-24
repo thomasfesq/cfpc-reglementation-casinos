@@ -87,6 +87,11 @@
     [id, theme, question, options, answer, explanation, article, url]);
   const revisionKey = JSON.stringify(revision);
   const topicTotals = tally();
+  const topicIcons = new Map([
+    ["Admission en salle", "admission"], ["Roulette française", "roulette"],
+    ["Black-jack", "cartes"], ["Machines à sous", "machine"],
+    ["Surveillance et contrôle", "surveillance"], ["Protection des joueurs", "protection"],
+  ]);
   let saved = true;
   let updatedCatalogue = false;
   let resetTrigger = null;
@@ -174,11 +179,12 @@
   function showHome(withFocus = false) {
     const hero = element("section", "hero");
     const copy = element("div", "hero-copy");
-    const heading = element("h1", "hero-title", "Réglementation des jeux en casino");
+    const heading = element("h1", "hero-title");
+    heading.append("Réglementation ", element("span", "hero-subject", "des jeux en casino"));
     copy.append(
       element("p", "eyebrow", "Quiz de formation"),
       heading,
-      element("p", "", "À l’entrée, à une table ou en salle, quelle décision prendre ? Entraînez-vous sur des situations de travail, puis retrouvez le texte qui justifie chaque réponse.")
+      element("p", "hero-intro", "À l’entrée, à la table ou en salle, quelle décision prendre ? Exercez-vous sur des situations de travail et retrouvez le texte qui justifie chaque réponse.")
     );
     const actions = element("div", "actions");
     if (!attempt) actions.append(button("Commencer le quiz", "primary", start));
@@ -187,26 +193,38 @@
     const browse = element("a", "hero-link", "Explorer les thèmes");
     browse.href = "#themes";
     actions.append(browse);
-    copy.append(actions, stats([
+    copy.append(stats([
       ["Questions", questions.length],
       ["Thèmes", topicTotals.size],
       ...(attempt ? [["Répondues", countAnswered() + " sur " + questions.length]] : []),
-    ]));
+    ]), actions);
+    const picture = element("div", "hero-visual");
     const photo = element("img", "hero-photo");
-    photo.src = "./assets/hero-learning.webp";
+    photo.src = "./assets/roulette-formation.webp";
     photo.alt = "";
-    hero.append(copy, photo);
+    photo.fetchPriority = "high";
+    picture.append(photo);
+    hero.append(copy, picture);
 
     const topics = element("section", "themes");
     topics.id = "themes";
     topics.tabIndex = -1;
-    topics.append(element("h2", "section-title", "Thèmes et textes officiels"));
+    const topicsHead = element("div", "themes-head");
+    topicsHead.append(element("h2", "section-title", "Thèmes et textes officiels"),
+      element("p", "themes-hint", "Ouvrez un thème pour consulter ses références."));
+    topics.append(topicsHead);
     const list = element("ul", "theme-list");
     for (const [theme, {total}] of topicTotals) {
       const item = element("li");
       const disclosure = element("details", "topic");
       const summary = element("summary");
-      summary.append(element("strong", "", theme), element("small", "", numberLabel(total, "question", "questions")));
+      const icon = element("span", "topic-icon");
+      icon.setAttribute("aria-hidden", "true");
+      const motif = topicIcons.get(theme);
+      if (motif) icon.classList.add("motif-" + motif);
+      const label = element("span", "topic-label");
+      label.append(element("strong", "", theme), element("small", "", numberLabel(total, "question", "questions")));
+      summary.append(icon, label);
       const sources = element("ul", "source-list");
       const unique = new Set();
       for (const question of questions.filter(q => q.theme === theme)) {
@@ -232,6 +250,16 @@
     show(nodes, withFocus ? heading : null);
   }
 
+  const referenceLink = document.querySelector("#lien-references");
+  if (referenceLink) {
+    referenceLink.closest("nav").hidden = false;
+    referenceLink.addEventListener("click", (event) => {
+      if (event.ctrlKey || event.metaKey || event.altKey || event.shiftKey || event.button !== 0) return;
+      if (!document.querySelector("#themes")) showHome();
+      document.querySelector("#themes").focus({preventScroll: true});
+    });
+  }
+
   function start() {
     updatedCatalogue = false;
     attempt = {phase: "active", position: 0, draft: null, answers: Array(questions.length).fill(null)};
@@ -239,23 +267,48 @@
     showQuestion(true);
   }
 
-  function progressCard(label, value, total, detail) {
+  function parcoursHeader(title, back, description) {
+    const header = element("header", "parcours-head");
+    const location = element("div", "parcours-location");
+    const heading = element("h1", "parcours-title", title);
+    location.append(heading);
+    if (description) location.append(element("p", "", description));
+    header.append(button(back.label, "text back", back.action), location);
+    return {header, heading};
+  }
+
+  function showParcours(screen, nodes, focus) {
+    const page = element("div", "quiz-parcours quiz-parcours--" + screen);
+    page.append(...nodes);
+    show([page], focus);
+  }
+
+  function progressCard(value, total) {
     const card = element("aside", "card progress-card");
-    const title = element("h2", "section-title", label);
-    const explanation = element("p", "counter", detail);
+    const title = element("h2", "section-title", "Progression");
+    const count = value + " / " + total;
+    const explanation = element("p", "counter");
+    explanation.append(element("span", "progress-count", count), " réponses validées");
     const bar = element("progress", "progress");
     bar.max = total;
     bar.value = value;
-    bar.setAttribute("aria-label", label + " : " + detail);
+    bar.setAttribute("aria-label", "Progression : " + count + " réponses validées");
     card.append(title, explanation, bar);
     return card;
+  }
+
+  function optionKey(index) {
+    const letter = index < 26 ? String.fromCharCode(65 + index) : String(index + 1);
+    const key = element("span", "option-key", letter);
+    key.setAttribute("aria-hidden", "true");
+    return key;
   }
 
   function interactiveQuestion(question) {
     const form = element("form", "question-form");
     const choices = element("fieldset", "choices");
     const list = element("div", "choice-list");
-    choices.append(element("legend", "sr-only", "Choisir une réponse"), list);
+    choices.append(element("legend", "", "Choisir une réponse"), list);
     const actions = element("div", "actions");
     const validate = element("button", "button primary", "Valider la réponse");
     validate.type = "submit";
@@ -273,7 +326,7 @@
         store();
       });
       const option = element("label", "option");
-      option.append(input, element("span", "option-text", label));
+      option.append(optionKey(index), element("span", "option-text", label), input);
       list.append(option);
     });
     form.append(choices, actions);
@@ -299,17 +352,17 @@
   }
 
   function markedOptions(question, choice) {
-    const list = element("div", "choice-list question-form");
+    const list = element("ul", "choice-list question-form");
     question.options.forEach((label, index) => {
       const correct = index === question.answer;
       const wrong = !correct && index === choice;
-      const option = element("div", "option" + (correct ? " correct" : wrong ? " incorrect" : ""));
+      const option = element("li", "option" + (correct ? " correct" : wrong ? " incorrect" : ""));
       const content = element("span", "option-text", label);
       if (correct || wrong) {
         const status = correct ? (choice === index ? "Votre réponse · Bonne réponse" : "Bonne réponse") : "Votre réponse";
         content.append(element("span", "option-status", status));
       }
-      option.append(content);
+      option.append(optionKey(index), content);
       list.append(option);
     });
     return list;
@@ -317,30 +370,32 @@
 
   function questionCard(question) {
     const card = element("article", "card question-card");
+    const panel = element("div", "question-panel");
     const prompt = element("h2", "question", question.question);
-    card.append(element("p", "eyebrow", question.theme), prompt);
-    return {card, prompt};
+    const body = element("div", "question-body");
+    panel.append(element("p", "eyebrow", question.theme), prompt);
+    card.append(panel, body);
+    return {card, prompt, body};
   }
 
   function showQuestion(focusPrompt, focusCorrection = false) {
     const index = attempt.position;
     const question = questions[index];
     const choice = attempt.answers[index];
-    const {header} = titleBlock("Question " + (index + 1) + " sur " + questions.length, null,
+    const {header} = parcoursHeader("Question " + (index + 1) + " sur " + questions.length,
       {label: "Accueil du quiz", action: () => showHome(true)});
-    const {card, prompt} = questionCard(question);
+    const {card, prompt, body} = questionCard(question);
     const layout = element("div", "workspace");
-    const progress = progressCard("Progression", countAnswered(), questions.length,
-      countAnswered() + " / " + questions.length + " réponses validées");
+    const progress = progressCard(countAnswered(), questions.length);
     let explanation;
 
     if (choice === null) {
-      card.append(interactiveQuestion(question));
+      body.append(interactiveQuestion(question));
     } else {
       explanation = correction(question, choice);
       const actions = element("div", "actions");
       const last = index === questions.length - 1;
-      actions.append(button(last ? "Voir le bilan" : "Question suivante", "primary", () => {
+      actions.append(button(last ? "Voir le bilan" : "Question suivante", "primary parcours-next", () => {
         if (last) {
           attempt.phase = "complete";
           store();
@@ -351,11 +406,11 @@
           showQuestion(true);
         }
       }));
-      card.append(markedOptions(question, choice), explanation, actions);
+      body.append(markedOptions(question, choice), explanation, actions);
     }
 
-    layout.append(card, progress);
-    show([header, layout], focusCorrection ? explanation : focusPrompt ? prompt : null);
+    layout.append(progress, card);
+    showParcours("question", [header, layout], focusCorrection ? explanation : focusPrompt ? prompt : null);
   }
 
   function wrongAnswers() {
@@ -366,7 +421,7 @@
   function showSummary() {
     const errors = wrongAnswers();
     const correct = questions.length - errors.length;
-    const {header, heading} = titleBlock("Bilan du quiz", null,
+    const {header, heading} = parcoursHeader("Bilan du quiz",
       {label: "Accueil du quiz", action: () => showHome(true)});
 
     const card = element("section", "card result-card");
@@ -380,7 +435,7 @@
     if (errors.length) copy.append(element("p", "", numberLabel(errors.length, "réponse à revoir", "réponses à revoir") + "."));
     else copy.append(element("p", "", "Toutes les réponses sont correctes."));
     const actions = element("div", "actions");
-    if (errors.length) actions.append(button("Revoir les erreurs", "primary", () => showReview(0)));
+    if (errors.length) actions.append(button("Revoir les erreurs", "primary parcours-next", () => showReview(0)));
     actions.append(button("Recommencer", "secondary", (event) => {
       confirmation.returnValue = "";
       resetTrigger = event.currentTarget;
@@ -394,30 +449,35 @@
     const list = element("ul");
     for (const [theme, totals] of tally(attempt.answers)) {
       const item = element("li");
-      item.append(element("span", "", theme), element("strong", "", totals.correct + " / " + totals.total));
+      const bar = element("progress", "progress");
+      bar.max = totals.total;
+      bar.value = totals.correct;
+      bar.setAttribute("aria-hidden", "true");
+      item.append(element("span", "", theme), element("strong", "", totals.correct + " / " + totals.total), bar);
       list.append(item);
     }
     detail.append(list);
-    show([header, card, detail], heading);
+    const layout = element("div", "parcours-results");
+    layout.append(card, detail);
+    showParcours("summary", [header, layout], heading);
   }
 
   function showReview(position) {
     const errors = wrongAnswers();
     const {question, index} = errors[position];
-    const {header} = titleBlock("Erreur " + (position + 1) + " sur " + errors.length,
-      "Question " + (index + 1) + " du quiz.",
-      {label: "Retour au bilan", action: showSummary});
-    const {card, prompt} = questionCard(question);
+    const {header} = parcoursHeader("Erreur " + (position + 1) + " sur " + errors.length,
+      {label: "Retour au bilan", action: showSummary}, "Question " + (index + 1) + " du quiz.");
+    const {card, prompt, body} = questionCard(question);
     const choice = attempt.answers[index];
     const actions = element("div", "actions");
     if (position > 0) {
       actions.append(button("Erreur précédente", "secondary", () => showReview(position - 1)));
     }
     const last = position + 1 === errors.length;
-    actions.append(button(last ? "Retour au bilan" : "Erreur suivante", "primary",
+    actions.append(button(last ? "Retour au bilan" : "Erreur suivante", last ? "primary" : "primary parcours-next",
       last ? showSummary : () => showReview(position + 1)));
-    card.append(markedOptions(question, choice), correction(question, choice), actions);
-    show([header, card], prompt);
+    body.append(markedOptions(question, choice), correction(question, choice), actions);
+    showParcours("review", [header, card], prompt);
   }
 
   confirmation.addEventListener("close", () => {
