@@ -4,12 +4,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
-  <meta name="theme-color" content="#f7f5ef">
+  <meta name="theme-color" content="#0a211b">
   <title>Réglementation des jeux en casino | CFPC</title>
   <link rel="stylesheet" href="./styles.css?v=5b145468afda">
   <link rel="stylesheet" href="./parcours.css?v=d037b6d45264">
-  <script src="./questions.js" defer></script>
-  <script src="./quiz.js?v=0e72dcbd05ce" defer></script>
+  <link rel="stylesheet" href="./jeu.css?v=7e4d2f00131c">
+  <script src="./questions.js?v=2816850df785" defer></script>
+  <script src="./pictos.js?v=88bcad14018c" defer></script>
+  <script src="./quiz-jeu.js?v=9f5919bc7c65" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -29,16 +31,17 @@
   <footer class="frame footer">
     <span>CFPC · Réglementation française vérifiée le <time datetime="2026-11-22">22 novembre 2026</time></span>
     <span id="statut-stockage">Progression enregistrée sur cet appareil</span>
-    <details class="design-credits">
-      <summary>Références de conception</summary>
-      <ul>
-        <li><a target="_blank" rel="noopener noreferrer" href="https://minimal.gallery/">Minimal Gallery</a> — hiérarchie des titres et espace de lecture.</li>
-        <li><a target="_blank" rel="noopener noreferrer" href="https://docusaurus.io/showcase">Docusaurus Showcase</a> — accès aux références par sujet.</li>
-        <li><a target="_blank" rel="noopener noreferrer" href="https://www.typeui.sh/ui-animations">TypeUI</a> — ouverture des rubriques et retour visuel.</li>
-        <li><a target="_blank" rel="noopener noreferrer" href="https://motion.dev/examples">Motion</a> — transitions courtes entre les états d’une réponse.</li>
-      </ul>
-    </details>
+    <button id="lien-conception" class="credit-link" type="button" hidden>Références de conception</button>
   </footer>
+
+  <template id="modele-credits">
+    <ul>
+      <li><a target="_blank" rel="noopener noreferrer" href="https://minimal.gallery/">Minimal Gallery</a> — hiérarchie des titres et espace de lecture.</li>
+      <li><a target="_blank" rel="noopener noreferrer" href="https://docusaurus.io/showcase">Docusaurus Showcase</a> — accès aux références par sujet.</li>
+      <li><a target="_blank" rel="noopener noreferrer" href="https://www.typeui.sh/ui-animations">TypeUI</a> — ouverture des rubriques et retour visuel.</li>
+      <li><a target="_blank" rel="noopener noreferrer" href="https://motion.dev/examples">Motion</a> — transitions courtes entre les états d’une réponse.</li>
+    </ul>
+  </template>
 
   <dialog id="confirmation" aria-labelledby="titre-confirmation">
     <form method="dialog">
