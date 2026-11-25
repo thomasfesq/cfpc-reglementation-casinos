@@ -616,30 +616,6 @@ p.journey-hero-copy { max-inline-size: 24ch; font-size: clamp(1.48rem, 3.35vw, 3
 }
 
 
-.scene-card { position: relative; }
-
-.scene-loupe {
-  position: absolute;
-  z-index: 2;
-  inset: .42rem .42rem auto auto;
-  display: grid;
-  place-items: center;
-  inline-size: 44px;
-  block-size: 44px;
-  padding: 0;
-  border: 1px solid var(--gold-bright);
-  border-radius: 50%;
-  background: #102b22;
-  color: var(--gold-bright);
-  font: 700 1.35rem/1 system-ui, sans-serif;
-  cursor: pointer;
-}
-
-.scene-loupe:is(:hover, [aria-pressed="true"]) { background: var(--gold-bright); color: var(--felt-deep); }
-.scene-loupe:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
-.scene-card[data-closeup] > .scene-art::before,
-.scene-card[data-closeup] > .scene-art::after { scale: 1.32; }
-
 .clue-progress {
   display: flex;
   align-items: center;
@@ -710,33 +686,26 @@ p.journey-hero-copy { max-inline-size: 24ch; font-size: clamp(1.48rem, 3.35vw, 3
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .scene-card > .scene-art::before, .scene-card > .scene-art::after {
-    transition: scale 270ms cubic-bezier(.22,.8,.3,1);
-  }
-}
-
 @media (forced-colors: active) {
-  .scene-loupe, .clue-mark { border-color: ButtonText; }
-  .scene-loupe:focus-visible { outline-color: Highlight; }
+  .clue-mark { border-color: ButtonText; }
   .clue-mark[data-read] { border-width: 2px; }
 }
 
 /* Effets du parcours CFPC dans les tons du tapis, du cuivre et de l’ivoire. */
-.quiz-screen :is(.floor-pin, .scene-loupe):focus-visible {
+.quiz-screen .floor-pin:focus-visible {
   outline: 3px solid var(--gold-bright);
   outline-offset: 3px;
   box-shadow: 0 0 0 3px var(--felt-deep);
 }
 
-.quiz-screen :is(.floor-pin, .scene-loupe):active {
+.quiz-screen .floor-pin:active {
   background: var(--gold-bright);
   border-color: var(--gold-bright);
   color: var(--felt-deep);
 }
 
 @media (forced-colors: active) {
-  .quiz-screen :is(.floor-pin, .scene-loupe):focus-visible { outline-color: Highlight; }
+  .quiz-screen .floor-pin:focus-visible { outline-color: Highlight; }
 }
 
 @media (prefers-reduced-motion: no-preference) {

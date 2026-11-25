@@ -2,7 +2,7 @@
 
 const scope = self.registration.scope;
 const cachePrefix = "cfpc-quiz:" + scope + ":";
-const cacheName = cachePrefix + "694a39979c9bb62c";
+const cacheName = cachePrefix + "fc804adc6b31d0a0";
 
 // Each install verifies the exact bytes of the whole version before activation.
 const assets = {
@@ -17,17 +17,17 @@ const assets = {
   "assets/themes.png": "sha256-JnrgiiMZwmdp++qtxiTTOK81v/qNacMPws68/ALp9n0=",
   "assets/work-sans-bold.ttf": "sha256-6DmLIiJaH5cd+bsS+o+53Ux26Aqk1n1FveYOu8bFrYE=",
   "assets/work-sans-regular.ttf": "sha256-oTHnAis07xlQqda92hb11FCcwf4a9ZkaRVL+vSpAJ+U=",
-  "experience.css?v=7a678c91e47c": "sha256-emeMkeR8n1e6lRRdczCjVTYEPUtYy1vaKJLfS5sWZ1I=",
+  "experience.css?v=5ba7be7f10a6": "sha256-W6e+fxCmHaEeqLkLwRDrqtfFt4FeRi5+uXPazEDlZms=",
   "experience.js?v=f9f7646ed188": "sha256-+fdkbtGI4fv3GquK3H1gj0BGhQK+CczTQ95QH7xVF0M=",
   "histoires.js?v=a52646a95c1b": "sha256-pSZGqVwbkOLxh6Y1UEDBTQtBgJ9xgt3CMoPBQ0qa0cA=",
-  "index.html": "sha256-Yw8QL4LWwKsoCdLIl9acQkiZLv01lNN4RUo7rQcBkFQ=",
+  "index.html": "sha256-Te+f6/5DtREx9VIQ2idM5FNd9PUGI637VY4YfozQidc=",
   "installation.js?v=214fdf706634": "sha256-IU/fcGY0bf/c13FyJx8/4BD51uHQZI1Xvrj6q9LHtT0=",
   "jeu.css?v=ef26f8592002": "sha256-7yb4WSACox2iw6BVzfrpK4DYEfnQUe7D4oVjjFw4FsA=",
   "manifest.webmanifest": "sha256-9vdtJ0uShf4J5tHizu8495bxrFer/ryNT9X/tGxmzbk=",
   "parcours.css?v=d037b6d45264": "sha256-0De21FJkn2ykhi5KfDM4KLZ3F9/JXGtwrC29ko2HA68=",
   "pictos.js?v=88bcad14018c": "sha256-iLytFAGMDCduDW/6tS78+V5Wq3Q2P+0zO0ZQch/UFHk=",
   "questions.js?v=2816850df785": "sha256-KBaFDfeFXB0giXlwH5PgaXkeRionW4LzxJ1OYR2X8P4=",
-  "quiz-jeu.js?v=d6c03d1819e5": "sha256-1sA9GBnl/ilgYME+dycINiqNraIEU9rTYD/uYFXPVdA=",
+  "quiz-jeu.js?v=0d1925a56470": "sha256-DRklpWRwL4KU/5/XiIp7nOCVwnu1gnhVoNHx6kpXBFc=",
   "styles.css?v=5b145468afda": "sha256-WxRUaK/aLdbAicJUbmnuehfc5ZKn9EpTbcyZDb37/nI="
 };
 const urls = new Map(Object.entries(assets).map(([path, integrity]) =>

@@ -730,27 +730,9 @@
   }
 
   function sceneBlock(index) {
-    let closeup = false;
     const block = fixed(() => {
       const card = element("div", "scene-card");
-      const lens = element("button", "scene-loupe");
-      const sign = element("span");
-      lens.type = "button";
-      lens.dataset.quizFocus = "scene-closeup";
-      lens.setAttribute("aria-label", "Agrandir l’image");
-      sign.setAttribute("aria-hidden", "true");
-      lens.append(sign);
-      const update = () => {
-        card.toggleAttribute("data-closeup", closeup);
-        lens.setAttribute("aria-pressed", String(closeup));
-        sign.textContent = closeup ? "−" : "+";
-      };
-      lens.addEventListener("click", () => {
-        closeup = !closeup;
-        update();
-      });
-      update();
-      card.append(sceneArt(index), lens);
+      card.append(sceneArt(index));
       return card;
     });
     block.key = "scene";
