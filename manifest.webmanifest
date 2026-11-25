@@ -1,7 +1,7 @@
 {
-  "name": "CFPC · Réglementation des casinos",
-  "short_name": "Quiz CFPC",
-  "description": "Douze questions de formation sur la réglementation des jeux en casino.",
+  "name": "CFPC · Prise de service",
+  "short_name": "CFPC",
+  "description": "Six espaces à explorer, douze décisions de métier et une enquête finale sur la réglementation des jeux en casino.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
@@ -9,8 +9,37 @@
   "background_color": "#0a211b",
   "theme_color": "#0a211b",
   "icons": [
-    { "src": "./assets/cfpc-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/cfpc-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "./assets/cfpc-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "./assets/cfpc-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/cfpc-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/cfpc-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Reprendre le service",
+      "url": "./#reprendre"
+    },
+    {
+      "name": "Carte de la salle",
+      "url": "./#carte"
+    },
+    {
+      "name": "Textes officiels",
+      "url": "./#themes"
+    }
   ]
 }

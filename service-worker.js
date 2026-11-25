@@ -2,26 +2,32 @@
 
 const scope = self.registration.scope;
 const cachePrefix = "cfpc-quiz:" + scope + ":";
-const cacheName = cachePrefix + "e62548f02457bbeb";
+const cacheName = cachePrefix + "7ec2e8ae6d7eddb4";
 
 // Each install verifies the exact bytes of the whole version before activation.
 const assets = {
+  "assets/carte-salle.webp": "sha256-zsanPv96DW5p3RmsxiiJxAIzo5PCXIRzJQIYrEU6ARo=",
   "assets/cfpc-192.png": "sha256-1EuJdvvVodefsLW68ECZibN8G2Zssqhw0c7C3XwhBAg=",
   "assets/cfpc-512.png": "sha256-72J9mnPo7UEomQD4iZwjplgjJV464ULf0z8mU4BEEUo=",
   "assets/cfpc-maskable-512.png": "sha256-3XzOAgxlLJk2ZNWTo1z6dC9zEELGIHzsqiZmUtPu1f0=",
   "assets/hero-learning.webp": "sha256-t4Js9txrm3ZqidvXcbD4fGxaprunuQpvGvXY+UtbhnM=",
   "assets/roulette-formation.webp": "sha256-fwCf023pK/2GwJDPjL2OUu6RPXtisowOOA9cd5DP6nA=",
+  "assets/scenes-a.webp": "sha256-Q3TwzEblMWff1sTkc+8J8SGRfKaL7CkD6wIOvJbp9sc=",
+  "assets/scenes-b.webp": "sha256-KbZhQZi/AKUPkVYlK318R9IQ7nm6xHXtZ61ofACrJ3E=",
   "assets/themes.png": "sha256-JnrgiiMZwmdp++qtxiTTOK81v/qNacMPws68/ALp9n0=",
   "assets/work-sans-bold.ttf": "sha256-6DmLIiJaH5cd+bsS+o+53Ux26Aqk1n1FveYOu8bFrYE=",
   "assets/work-sans-regular.ttf": "sha256-oTHnAis07xlQqda92hb11FCcwf4a9ZkaRVL+vSpAJ+U=",
-  "index.html": "sha256-7tYd+dCej4H2vIpUYT43D0+H2EWt1BYok5u4xvsOsUE=",
+  "experience.css?v=6c48d06e3d5b": "sha256-bEjQbj1bXzw2z3Jw54i5J/q2SD7+IHcbNEKyq7D2z2o=",
+  "experience.js?v=f9f7646ed188": "sha256-+fdkbtGI4fv3GquK3H1gj0BGhQK+CczTQ95QH7xVF0M=",
+  "histoires.js?v=a52646a95c1b": "sha256-pSZGqVwbkOLxh6Y1UEDBTQtBgJ9xgt3CMoPBQ0qa0cA=",
+  "index.html": "sha256-Z4SY13XSkv258SlCOeJJk1sW7lgLhhLeZlfhWZdwcdM=",
   "installation.js?v=214fdf706634": "sha256-IU/fcGY0bf/c13FyJx8/4BD51uHQZI1Xvrj6q9LHtT0=",
   "jeu.css?v=ef26f8592002": "sha256-7yb4WSACox2iw6BVzfrpK4DYEfnQUe7D4oVjjFw4FsA=",
-  "manifest.webmanifest": "sha256-AzxOKfRrOk201qvn3huc+uJ3eC1HHl4t+D//62ZL/Wo=",
+  "manifest.webmanifest": "sha256-9vdtJ0uShf4J5tHizu8495bxrFer/ryNT9X/tGxmzbk=",
   "parcours.css?v=d037b6d45264": "sha256-0De21FJkn2ykhi5KfDM4KLZ3F9/JXGtwrC29ko2HA68=",
   "pictos.js?v=88bcad14018c": "sha256-iLytFAGMDCduDW/6tS78+V5Wq3Q2P+0zO0ZQch/UFHk=",
   "questions.js?v=2816850df785": "sha256-KBaFDfeFXB0giXlwH5PgaXkeRionW4LzxJ1OYR2X8P4=",
-  "quiz-jeu.js?v=07f41c58bb7c": "sha256-B/QcWLt8uq1GQdhH2/XTk0zAD0n34qJ0T5ekAynO/EM=",
+  "quiz-jeu.js?v=a5d6a35725d7": "sha256-pdajVyXXNNoe6o8u0lQCE20/SrzX4796H7RxwA6rgug=",
   "styles.css?v=5b145468afda": "sha256-WxRUaK/aLdbAicJUbmnuehfc5ZKn9EpTbcyZDb37/nI="
 };
 const urls = new Map(Object.entries(assets).map(([path, integrity]) =>

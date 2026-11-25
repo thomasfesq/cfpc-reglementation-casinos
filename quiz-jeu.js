@@ -58,10 +58,11 @@
     return anchor;
   }
 
-  if (!questions) {
+  const experience = questions && window.CFPC_EXPERIENCE?.create(questions, window.CFPC_STORIES);
+  if (!experience) {
     const header = element("div", "quiz-screen-head");
     header.append(element("h1", "screen-title", "Quiz indisponible"),
-      element("p", "", "Le catalogue de questions n’a pas pu être chargé."));
+      element("p", "", "Les ressources du parcours n’ont pas pu être chargées."));
     storageStatus.textContent = "";
     main.replaceChildren(header);
     return;
@@ -79,9 +80,10 @@
   let attempt = recover(readRecord());
 
   function updateStorageStatus() {
-    storageStatus.textContent = restoredFromAnotherWindow
+    const status = restoredFromAnotherWindow
       ? "Progression récupérée depuis l’autre fenêtre"
       : saved ? "Progression enregistrée sur cet appareil" : "Progression conservée pendant cette session";
+    if (storageStatus.textContent !== status) storageStatus.textContent = status;
   }
 
   function readRecord() {
@@ -104,7 +106,10 @@
         updatedCatalogue = true;
         return null;
       }
-      if (validAttempt(record.attempt)) return record.attempt;
+      if (validAttempt(record.attempt)) {
+        record.attempt.journey = experience.restore(record.attempt);
+        return record.attempt;
+      }
     } catch (error) {
       if (!(error instanceof SyntaxError)) saved = false;
     }
@@ -119,12 +124,9 @@
     }
     const validOption = (choice, index) => Number.isInteger(choice) && choice >= 0 &&
       choice < questions[index].options.length;
-    const answersValid = value.answers.every((choice, index) => {
-      if (choice === null) return value.phase === "active" && index >= value.position;
-      return index <= value.position && validOption(choice, index);
-    });
+    const answersValid = value.answers.every((choice, index) =>
+      choice === null ? value.phase === "active" : validOption(choice, index));
     return answersValid &&
-      (value.phase !== "complete" || value.position === questions.length - 1) &&
       (value.draft === null || (value.answers[value.position] === null && validOption(value.draft, value.position)));
   }
 
@@ -135,11 +137,10 @@
       const latest = readRecord();
       if (latest !== undefined && latest !== storedRecord) {
         attempt = recover(latest);
-        restoredFromAnotherWindow = true;
+        restoredFromAnotherWindow = !!attempt;
         updateStorageStatus();
-        if (!attempt) showHome();
-        else if (attempt.phase === "complete") showSummary();
-        else showQuestion(true);
+        if (attempt) resumeService();
+        else showHome();
         return;
       }
       if (change() === false) return;
@@ -318,12 +319,21 @@
 
   function setPage(screen, pageIndex, moveFocus) {
     if (pageIndex < 0 || pageIndex >= screen.pages.length) return;
+    screen.swipeMotion?.cancel();
     screen.index = pageIndex;
     const fragments = screen.pages[pageIndex];
     screen.page.replaceChildren(...fragments.map(({index, start, end}) =>
       fragmentNode(screen.config.blocks[index], start, end)));
     const shown = (pageIndex + 1) + " / " + screen.pages.length;
-    screen.controls.hidden = screen.pages.length < 2;
+    const paginated = screen.pages.length > 1;
+    screen.controls.hidden = !paginated;
+    // When zoomed, give horizontal panning back to the browser as well.
+    const canSwipe = paginated && !viewportIsZoomed();
+    if (canSwipe !== screen.stage.hasAttribute("data-swipe-pages")) {
+      screen.stage.toggleAttribute("data-swipe-pages", canSwipe);
+      if (canSwipe) screen.stage.addEventListener("touchmove", trackSwipe, {passive: false});
+      else screen.stage.removeEventListener("touchmove", trackSwipe);
+    }
     screen.controls.dataset.pages = String(screen.pages.length);
     screen.counter.textContent = shown;
     screen.previous.disabled = pageIndex === 0;
@@ -386,7 +396,7 @@
     const chips = element("div", "chip-list");
     chips.setAttribute("aria-hidden", "true");
     for (let index = 0; index < Math.min(total, 12); index += 1) {
-      const finished = (index + 1) / Math.min(total, 12) <= value / total;
+      const finished = attempt.answers[index] !== null;
       const chip = element("span", "score-chip" + (finished ? " earned" : ""));
       if (index === attempt.position) chip.classList.add("current");
       chip.append(icon("chip"));
@@ -416,6 +426,7 @@
       header.append(location);
     }
     if (config.progress) header.append(progressTrack(countAnswered(), questions.length));
+    if (config.steps !== undefined) header.append(journeySteps(config.steps));
 
     const stage = element(config.submit ? "form" : "div", "quiz-stage");
     if (config.submit) {
@@ -443,7 +454,11 @@
     screen.next = button("", "secondary page-turn", () => turn(1));
     screen.next.setAttribute("aria-label", "Page suivante");
     screen.next.append(element("span", "page-turn-label", "Suivante"), icon("arrow-right"));
-    controls.append(screen.previous, counter, screen.next);
+    const pageStatus = element("span", "page-status");
+    const swipeHint = element("span", "swipe-hint", "Balayer");
+    swipeHint.setAttribute("aria-hidden", "true");
+    pageStatus.append(counter, swipeHint);
+    controls.append(screen.previous, pageStatus, screen.next);
     navigation.append(controls);
     if (config.actions?.length) {
       const actions = element("div", "screen-actions");
@@ -471,6 +486,85 @@
       }
     }
   }
+
+  function viewportIsZoomed() {
+    return (window.visualViewport?.scale ?? 1) > 1.01;
+  }
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let swipe;
+  let suppressTouchClickUntil = -1;
+
+  document.addEventListener("pointerdown", () => { suppressTouchClickUntil = -1; }, true);
+  document.addEventListener("click", (event) => {
+    if (event.detail === 0 || event.timeStamp > suppressTouchClickUntil) return;
+    suppressTouchClickUntil = -1;
+    event.preventDefault();
+    event.stopPropagation();
+  }, true);
+
+  document.addEventListener("touchstart", (event) => {
+    swipe = null;
+    suppressTouchClickUntil = -1;
+    const screen = currentScreen;
+    if (event.touches.length !== 1 || !screen?.stage.hasAttribute("data-swipe-pages") ||
+        !screen.stage.contains(event.target) || viewportIsZoomed()) return;
+
+    const {identifier, clientX: x, clientY: y} = event.touches[0];
+    // Keep the screen edges available for the browser and the operating system.
+    if (x < 24 || x > document.documentElement.clientWidth - 24) return;
+    swipe = {identifier, x, y, screen, pageIndex: screen.index};
+  }, {passive: true});
+
+  function trackSwipe(event) {
+    if (!swipe) return;
+    const touch = event.touches[0];
+    if (event.touches.length !== 1 || touch.identifier !== swipe.identifier) {
+      swipe = null;
+      return;
+    }
+    const x = Math.abs(touch.clientX - swipe.x);
+    const y = Math.abs(touch.clientY - swipe.y);
+    if (y > 18 && y > x) {
+      swipe = null;
+    } else if (x >= 12 && x >= y * 1.45 && event.cancelable) {
+      // Keep the browser from treating the drag as scrolling and delaying the next tap.
+      event.preventDefault();
+    }
+  }
+
+  main.addEventListener("touchend", (event) => {
+    const gesture = swipe;
+    swipe = null;
+    const screen = currentScreen;
+    if (!gesture || event.touches.length || gesture.screen !== screen || gesture.pageIndex !== screen.index ||
+        screen.pages.length < 2 || viewportIsZoomed() ||
+        window.getSelection()?.isCollapsed === false) return;
+
+    const touch = Array.from(event.changedTouches).find(({identifier}) => identifier === gesture.identifier);
+    if (!touch) return;
+    const x = touch.clientX - gesture.x;
+    const y = touch.clientY - gesture.y;
+    if (Math.abs(x) < 42 || Math.abs(x) < Math.abs(y) * 1.45 || event.defaultPrevented) return;
+
+    // Some browsers deliver a non-cancelable touchend after passive moves.
+    // Suppress only the click from this gesture, including at the ends.
+    if (event.cancelable) event.preventDefault();
+    suppressTouchClickUntil = event.timeStamp + 350;
+    const direction = x < 0 ? 1 : -1;
+    const target = screen.index + direction;
+    if (target < 0 || target >= screen.pages.length) return;
+    setPage(screen, target, true);
+    if (!reducedMotion.matches) {
+      screen.swipeMotion = screen.page.animate([
+        {transform: "translateX(" + direction * 8 + "px)", opacity: .84},
+        {transform: "translateX(0)", opacity: 1},
+      ], {duration: 155, easing: "ease-out"});
+    }
+  }, {passive: false});
+
+  main.addEventListener("touchcancel", () => { swipe = null; }, {passive: true});
+  main.addEventListener("contextmenu", () => { swipe = null; });
 
   let reflowFrame;
   function scheduleReflow() {
@@ -502,14 +596,14 @@
   }
 
   function showHome(withFocus = true) {
-    if (location.hash === "#themes") history.replaceState(null, "", location.pathname + location.search);
+    if (["#themes", "#carte", "#reprendre"].includes(location.hash)) {
+      history.replaceState(null, "", location.pathname + location.search);
+    }
 
-    const play = attempt?.phase === "complete"
-      ? iconButton("Voir le bilan", "primary", "trophy", showSummary)
-      : attempt
-        ? iconButton("Reprendre le quiz", "primary", "arrow-right", () => showQuestion(true))
-        : iconButton("Commencer le quiz", "primary", "arrow-right", start);
-    const browse = iconButton("Explorer les thèmes", "secondary", "book", () => showThemes());
+    const play = attempt
+      ? iconButton("Reprendre le service", "primary", "arrow-right", resumeService)
+      : iconButton("Commencer le service", "primary", "arrow-right", start);
+    const browse = iconButton("Explorer la salle", "secondary", "book", showMap);
 
     const blocks = [
       fixed(() => {
@@ -517,10 +611,10 @@
         heading.tabIndex = -1;
         heading.append("Réglementation ", element("span", "hero-subject", "des jeux en casino"));
         const lead = element("div", "hero-lead");
-        lead.append(element("p", "eyebrow", "Quiz de formation"), heading);
+        lead.append(element("p", "eyebrow", "Prise de service"), heading);
         return lead;
       }),
-      readable("À l’entrée, à la table ou en salle, quelle décision prendre ? Exercez-vous sur des situations de travail et retrouvez le texte qui justifie chaque réponse.",
+      readable("Prenez votre service. Explorez six espaces, prenez des décisions en situation et rassemblez les indices de l’enquête finale.",
         (text) => element("p", "hero-intro quiz-readable", text)),
       fixed(() => stats([
         ["Questions", questions.length],
@@ -599,8 +693,371 @@
   function start() {
     saveAttempt(() => {
       updatedCatalogue = false;
-      attempt = {phase: "active", position: 0, draft: null, answers: Array(questions.length).fill(null)};
-    }, showQuestion);
+      attempt = freshAttempt();
+    }, showMap);
+  }
+
+  const caseTitles = [
+    "Une visite accompagnée", "Le badge du prestataire", "Le jeton après l’annonce",
+    "Le zéro à la roulette", "Les cartes avant l’ouverture", "Le tirage du croupier",
+    "La machine de réserve", "Les signatures du bon", "Le registre de l’audit",
+    "La demande de l’inspecteur", "Trois ans après", "La portée de l’interdiction",
+  ];
+
+  function mapAction() {
+    return {label: "Carte de la salle", action: showMap};
+  }
+
+  function journeySteps(current) {
+    const steps = element("ol", "journey-steps");
+    steps.setAttribute("aria-label", "Étapes de la situation");
+    for (const [index, label] of ["Observer", "Décider", "Correction"].entries()) {
+      const step = element("li", "", label);
+      if (index === current) step.setAttribute("aria-current", "step");
+      steps.append(step);
+    }
+    return steps;
+  }
+
+  function sceneArt(index, css = "") {
+    const art = element("div", ("scene-art " + css).trim());
+    const tile = index % 6;
+    art.dataset.sheet = index < 6 ? "a" : "b";
+    art.style.setProperty("--scene-x", (tile % 3) * 50 + "%");
+    art.style.setProperty("--scene-y", tile >= 3 ? "100%" : "0%");
+    art.setAttribute("aria-hidden", "true");
+    return art;
+  }
+
+  function sceneBlock(index) {
+    return fixed(() => {
+      const card = element("div", "scene-card");
+      card.append(sceneArt(index));
+      return card;
+    });
+  }
+
+  function dialogue(speaker, line) {
+    return readable(line, (text, continued) => {
+      const block = element("div", "scene-dialogue");
+      if (!continued) block.append(element("p", "scene-speaker", speaker));
+      block.append(element("blockquote", "quiz-readable", text));
+      return block;
+    });
+  }
+
+  function mapTile({label, subtitle, status, progress, art, action, key}) {
+    const block = fixed(() => {
+      const item = element("li", "map-node");
+      const tile = element("button", "map-card");
+      tile.type = "button";
+      tile.dataset.status = status;
+      tile.dataset.quizFocus = key;
+      const copy = element("span", "map-copy");
+      copy.append(element("strong", "", label), element("span", "", subtitle));
+      const mark = element("span", "map-status", {
+        new: "À découvrir", playing: "En cours", review: "À revoir", mastered: "Maîtrisé",
+      }[status]);
+      tile.append(sceneArt(art, "map-thumb"), copy, mark);
+      if (progress) {
+        const meter = element("progress", "map-meter");
+        meter.max = progress.total;
+        meter.value = progress.done;
+        meter.setAttribute("aria-hidden", "true");
+        tile.append(meter);
+      }
+      tile.addEventListener("click", action);
+      item.append(tile);
+      return item;
+    });
+    block.key = key;
+    return block;
+  }
+
+  function caseStatus(index) {
+    if (!attempt) return "new";
+    if (attempt.answers[index] === null) {
+      return attempt.journey.drafts[index] !== null || (attempt.position === index && attempt.draft !== null)
+        ? "playing" : "new";
+    }
+    return experience.mastered(attempt, index) ? "mastered" : "review";
+  }
+
+  function showMap() {
+    const pins = [[50, 77], [20, 59], [80, 59], [20, 25], [50, 21], [80, 25]];
+    const areas = Array.from(experience.areas, ([theme, cases]) => {
+      const done = cases.filter(({index}) => attempt && attempt.answers[index] !== null).length;
+      const mastered = cases.filter(({index}) => attempt && experience.mastered(attempt, index)).length;
+      const status = mastered === cases.length ? "mastered" : done === cases.length ? "review" : done ? "playing" : "new";
+      return {theme, cases, done, status};
+    });
+    const intro = fixed(() => {
+      const item = element("li", "map-intro");
+      const hero = element("div", "journey-hero");
+      const art = element("img", "journey-hero-image");
+      art.src = "./assets/carte-salle.webp";
+      art.alt = "";
+      const plan = element("div", "floor-plan");
+      plan.append(art);
+      for (const [index, {theme, status}] of areas.entries()) {
+        if (!pins[index]) continue;
+        const pin = element("button", "floor-pin");
+        pin.type = "button";
+        pin.title = theme;
+        pin.dataset.status = status;
+        pin.style.setProperty("--pin-x", pins[index][0] + "%");
+        pin.style.setProperty("--pin-y", pins[index][1] + "%");
+        pin.setAttribute("aria-label", "Ouvrir sur la carte · " + theme);
+        pin.append(icon(theme));
+        pin.addEventListener("click", () => showArea(theme));
+        plan.append(pin);
+      }
+      hero.append(plan, element("p", "journey-hero-copy", "Choisissez un espace pour ouvrir ses situations."));
+      item.append(hero);
+      return item;
+    });
+    const tiles = areas.map(({theme, cases, done, status}) => mapTile({label: theme,
+      subtitle: done + " / " + cases.length + " situations traitées", status,
+      progress: {done, total: cases.length}, art: cases[0].index, key: theme, action: () => showArea(theme)}));
+    const actions = [];
+    if (attempt) {
+      actions.push(iconButton(attempt.phase === "complete" && !attempt.journey.active
+        ? "Voir le bilan" : "Reprendre le service", "primary", "arrow-right", resumeService));
+      if (attempt.phase === "active" && attempt.journey.practice && attempt.journey.active !== "practice") {
+        actions.push(iconButton("Reprendre l’entraînement", "secondary", "review", () => startPractice()));
+      }
+    }
+    showScreen({name: "map", title: "Carte de la salle", back: homeAction(), blocks: [intro, ...tiles],
+      pageTag: "ul", pageClass: "map-list", actions});
+  }
+
+  function showArea(theme) {
+    const cases = experience.areas.get(theme);
+    const blocks = cases.map(({index, scene}) => mapTile({label: caseTitles[index] || scene.place,
+      subtitle: scene.place, status: caseStatus(index), art: index, key: "case-" + index,
+      action: () => openCase(index)}));
+    showScreen({name: "area", title: theme, back: mapAction(), blocks,
+      pageTag: "ul", pageClass: "map-list"});
+  }
+
+  function freshAttempt() {
+    const progress = {phase: "active", position: 0, draft: null, answers: Array(questions.length).fill(null)};
+    progress.journey = experience.restore(progress);
+    return progress;
+  }
+
+  function selectCase(index) {
+    const {journey, position, draft} = attempt;
+    journey.drafts[position] = attempt.answers[position] === null ? draft : null;
+    attempt.position = index;
+    attempt.draft = journey.drafts[index];
+    journey.active = null;
+  }
+
+  function openCase(index) {
+    saveAttempt(() => {
+      if (!attempt) attempt = freshAttempt();
+      selectCase(index);
+    }, resumeCase);
+  }
+
+  function nextCase(index) {
+    const area = experience.areas.get(questions[index].theme);
+    const nearby = area.find((item) => attempt.answers[item.index] === null);
+    if (nearby) return nearby.index;
+    const unanswered = attempt.answers.findIndex((choice, position) => position > index && choice === null);
+    return unanswered >= 0 ? unanswered : attempt.answers.indexOf(null);
+  }
+
+  function resumeCase() {
+    if (attempt.draft !== null || attempt.answers[attempt.position] !== null) showQuestion(true);
+    else showBriefing();
+  }
+
+  function resumeService() {
+    if (attempt.journey.active) showActivity();
+    else if (attempt.phase === "complete") showSummary();
+    else resumeCase();
+  }
+
+  function showBriefing() {
+    const index = attempt.position;
+    const {question, scene} = experience.cases[index];
+    const decide = iconButton("Prendre une décision", "primary", "arrow-right", () => showQuestion());
+    showScreen({name: "briefing", title: caseTitles[index] || scene.place,
+      context: question.theme + " · " + scene.place,
+      back: mapAction(), steps: 0, progress: true,
+      blocks: [sceneBlock(index), dialogue(scene.speaker, scene.line)], actions: [decide]});
+  }
+
+  function syncSelection(validate, input, index) {
+    if (!validate.isConnected) return;
+    validate.disabled = false;
+    if (!input.isConnected) {
+      const replacement = currentScreen.page.querySelector('input[data-quiz-focus="option-' + index + '"]');
+      if (replacement) replacement.checked = true;
+    }
+  }
+
+  function startPractice(queue) {
+    const journey = attempt.journey;
+    saveAttempt(() => {
+      if (!journey.practice && !queue?.length) return false;
+      journey.practice ??= {queue, cursor: 0, draft: null, revealed: false};
+      journey.active = "practice";
+    }, showActivity);
+  }
+
+  function openDossier() {
+    const journey = attempt.journey;
+    if (!journey.investigation && journey.dossier.every((choice) => choice !== null)) return showDossierResult();
+    saveAttempt(() => {
+      journey.investigation ??= {cursor: -1, draft: null, revealed: false};
+      journey.active = "investigation";
+    }, showActivity);
+  }
+
+  function showDossier(reveal) {
+    const journey = attempt.journey;
+    const intro = fixed(() => {
+      const item = element("li", "dossier-intro");
+      item.append(element("p", "", "Deux situations ont marqué la prise de service. Consultez les trois indices de vos collègues, puis consignez vos deux décisions."));
+      return item;
+    });
+    const clues = experience.clues.map(({title, source}, index) => {
+      const block = fixed(() => {
+        const item = element("li");
+        const clue = element("button", "clue-card");
+        const seen = !!(journey.clues & (1 << index));
+        clue.type = "button";
+        clue.dataset.seen = String(seen);
+        clue.dataset.quizFocus = "clue-" + index;
+        const label = element("span", "clue-title");
+        label.append(element("strong", "", title), element("small", "", source));
+        clue.append(icon(seen ? "check" : "book"), label, element("span", "clue-state", seen ? "Lu" : "À lire"));
+        clue.addEventListener("click", () => readClue(index));
+        item.append(clue);
+        return item;
+      });
+      block.key = "clue-" + index;
+      return block;
+    });
+    const started = journey.investigation.cursor >= 0;
+    const next = iconButton(started ? "Reprendre les décisions" : "Prendre les deux décisions", "primary", "arrow-right", () => {
+      if (started) return showActivity();
+      saveAttempt(() => {
+        if (journey.clues !== 7 || journey.active !== "investigation") return false;
+        const first = journey.dossier.indexOf(null);
+        if (first === -1) return false;
+        journey.investigation.cursor = first;
+      }, showActivity);
+    });
+    next.disabled = journey.clues !== 7;
+    showScreen({name: "dossier", title: "Enquête finale", icon: "book",
+      back: {label: "Retour au bilan", action: showSummary},
+      blocks: [intro, ...clues], actions: [next], pageTag: "ul", pageClass: "clue-list", reveal});
+  }
+
+  function readClue(index) {
+    const journey = attempt.journey;
+    saveAttempt(() => {
+      if (journey.active !== "investigation") return false;
+      journey.clues |= 1 << index;
+    }, () => {
+      const clue = experience.clues[index];
+      showScreen({name: "clue", title: clue.title,
+        back: {label: "Retour aux indices", action: () => showDossier("clue-" + index)},
+        blocks: [sceneBlock(clue.photo), dialogue(clue.source, clue.text)],
+        actions: [button("Retour aux indices", "primary", () => showDossier("clue-" + index))]});
+    });
+  }
+
+  function showActivity() {
+    const journey = attempt.journey;
+    const kind = journey.active;
+    const activity = journey[kind];
+    const practice = kind === "practice";
+    if (!practice && activity.cursor === -1) return showDossier();
+    const cursor = activity.cursor;
+    const isCurrent = () => journey.active === kind && journey[kind] === activity && activity.cursor === cursor;
+    const index = practice ? activity.queue[cursor] : cursor;
+    const question = practice ? experience.cases[index].variant : experience.dossier[index].question;
+    const answers = practice ? journey.variants : journey.dossier;
+    const title = practice ? "Situation à rejouer" : "Décision " + (activity.cursor + 1) + " sur 2";
+    const context = practice ? question.theme : "Enquête finale";
+    const back = practice ? mapAction() : {label: "Retour aux indices", action: () => showDossier()};
+    if (activity.revealed) {
+      const correct = answers[index] === question.answer;
+      const last = practice ? activity.cursor + 1 === activity.queue.length : activity.cursor + 1 === experience.dossier.length;
+      const action = iconButton(last ? (practice ? "Reprendre le service" : "Voir le bilan de l’enquête") : "Décision suivante",
+        "primary", "arrow-right", () => {
+          saveAttempt(() => {
+            if (!isCurrent() || !activity.revealed) return false;
+            if (last) {
+              journey[kind] = null;
+              journey.active = null;
+            } else {
+              activity.cursor += 1;
+              activity.draft = null;
+              activity.revealed = false;
+            }
+          }, last ? (practice ? resumeService : showDossierResult) : showActivity);
+        });
+      showScreen({name: "activity-feedback", parcours: true,
+        title: correct ? "Bonne réponse" : "Réponse incorrecte", context,
+        state: correct ? "correct" : "incorrect", icon: correct ? "check" : "review",
+        back, steps: 2, blocks: explanationBlocks(question, answers[index]), actions: [action]});
+      return;
+    }
+    const validate = element("button", "button primary", "Valider la réponse");
+    validate.type = "submit";
+    validate.setAttribute("form", "formulaire-reponse");
+    validate.disabled = activity.draft === null;
+    validate.prepend(icon("check"));
+    const options = optionBlocks(question, null, {
+      selected: () => activity.draft,
+      pick(choice, input) {
+        saveAttempt(() => {
+          if (!isCurrent() || activity.revealed) return false;
+          activity.draft = choice;
+        }, () => syncSelection(validate, input, choice));
+      },
+    });
+    showScreen({name: practice ? "practice" : "investigation", parcours: true, title, context,
+      back, steps: 1, focusPrompt: true, questionLabel: question.question, choiceCount: question.options.length,
+      blocks: [promptBlock(question), ...options], actions: [validate],
+      reveal: activity.draft !== null ? "option-" + activity.draft : null,
+      submit() {
+        saveAttempt(() => {
+          if (!isCurrent() || activity.draft === null || activity.revealed) return false;
+          answers[index] = activity.draft;
+          activity.draft = null;
+          activity.revealed = true;
+        }, showActivity);
+      },
+    });
+  }
+
+  function showDossierResult() {
+    const score = experience.dossier.filter(({question}, index) =>
+      attempt.journey.dossier[index] === question.answer).length;
+    const blocks = [fixed(() => {
+      const card = element("section", "card mastery-card");
+      card.append(element("p", "journey-stamp", score === 2 ? "Enquête résolue" : "Enquête terminée"),
+        element("h2", "section-title", score + " / 2 décisions correctes"),
+        element("p", "", score === 2 ? "Vos décisions concordent avec les indices et les règles du service."
+          : "Consultez les deux règles pour reprendre le dossier en confiance."));
+      return card;
+    }), ...experience.dossier.map(({question}) => fixed(() => officialLink(question)))];
+    const actions = [button("Retour au bilan", "primary", showSummary),
+      button("Refaire l’enquête", "secondary", () => saveAttempt(() => {
+        attempt.journey.clues = 0;
+        attempt.journey.dossier = [null, null];
+        attempt.journey.investigation = {cursor: -1, draft: null, revealed: false};
+        attempt.journey.active = "investigation";
+      }, showDossier))];
+    showScreen({name: "dossier-result", parcours: true, title: "Bilan de l’enquête", icon: "trophy",
+      back: {label: "Retour au bilan", action: showSummary}, blocks, actions});
   }
 
   function promptBlock(question) {
@@ -641,8 +1098,7 @@
     input?.click();
   }
 
-  function optionBlocks(question, choice, validate) {
-    const position = attempt.position;
+  function optionBlocks(question, choice, controls) {
     return question.options.map((label, index) => {
       const key = "option-" + index;
       const correct = choice !== null && index === question.answer;
@@ -662,16 +1118,13 @@
           input.type = "radio";
           input.name = "reponse";
           input.value = String(index);
-          input.checked = attempt.draft === index;
+          input.checked = controls.selected() === index;
           input.dataset.quizFocus = key;
           input.addEventListener("keydown", (event) => adjacentOption(event, index, question.options.length));
           if (continued || text !== label) input.setAttribute("aria-label", label);
           input.addEventListener("change", () => {
             if (!input.checked) return;
-            saveAttempt(() => {
-              if (attempt.position !== position || attempt.answers[position] !== null) return false;
-              attempt.draft = index;
-            }, () => { validate.disabled = false; });
+            controls.pick(index, input);
           });
           option.append(input);
         }
@@ -724,9 +1177,17 @@
     validate.disabled = attempt.draft === null;
     validate.prepend(icon("check"));
     showScreen({
-      name: "question", parcours: true, title: context, back: homeAction(), progress: true, focusPrompt: true,
+      name: "question", parcours: true, title: context, back: mapAction(), progress: true, focusPrompt: true, steps: 1,
       questionLabel: question.question, choiceCount: question.options.length,
-      blocks: [promptBlock(question), ...optionBlocks(question, choice, validate)], actions: [validate],
+      blocks: [promptBlock(question), ...optionBlocks(question, choice, {
+        selected: () => attempt.draft,
+        pick(selected, input) {
+          saveAttempt(() => {
+            if (attempt.position !== index || attempt.answers[index] !== null) return false;
+            attempt.draft = selected;
+          }, () => syncSelection(validate, input, selected));
+        },
+      })], actions: [validate],
       reveal: restoreDraft && attempt.draft !== null ? "option-" + attempt.draft : null,
       submit() {
         saveAttempt(() => {
@@ -740,20 +1201,30 @@
 
   function showFeedback(question, choice, context) {
     const index = attempt.position;
-    const last = index === questions.length - 1;
+    const last = countAnswered() === questions.length;
     const correct = choice === question.answer;
-    const next = iconButton(last ? "Voir le bilan" : "Question suivante", "primary",
+    const next = iconButton(last ? "Voir le bilan" : "Situation suivante", "primary",
       last ? "trophy" : "arrow-right", () => {
+        if (attempt.phase === "complete") return showSummary();
         saveAttempt(() => {
-          if (attempt.position !== index || attempt.phase !== "active" || attempt.answers[index] === null) return false;
+          if (attempt.position !== index || attempt.answers[index] === null || attempt.phase !== "active") return false;
           if (last) attempt.phase = "complete";
-          else attempt.position += 1;
-        }, last ? showSummary : showQuestion);
+          else selectCase(nextCase(index));
+        }, last ? showSummary : showBriefing);
       });
+    const actions = [next];
+    if (!correct && !experience.mastered(attempt, index)) {
+      actions.push(iconButton(attempt.journey.practice ? "Reprendre l’entraînement" : "Rejouer cette règle",
+        "secondary", "review", () => startPractice([index])));
+    }
+    const blocks = explanationBlocks(question, choice);
+    if (!correct && experience.mastered(attempt, index)) {
+      blocks.unshift(fixed(() => element("p", "journey-stamp", "Variante réussie")));
+    }
     showScreen({
       name: "feedback", parcours: true, title: correct ? "Bonne réponse" : "Réponse incorrecte",
       state: correct ? "correct" : "incorrect", icon: correct ? "check" : "review",
-      context, back: homeAction(), progress: true, blocks: explanationBlocks(question, choice), actions: [next],
+      context, back: mapAction(), progress: true, steps: 2, blocks, actions,
     });
   }
 
@@ -774,31 +1245,50 @@
       const copy = element("div", "result-copy");
       copy.append(element("h2", "section-title", numberLabel(correct, "bonne réponse", "bonnes réponses") +
         " sur " + questions.length));
-      copy.append(element("p", "", errors.length
-        ? numberLabel(errors.length, "réponse à revoir", "réponses à revoir") + "."
-        : "Toutes les réponses sont correctes."));
+      copy.append(element("p", "", "Score du premier passage."));
       card.append(ring, copy);
       return card;
     })];
-    const actions = [];
-    if (errors.length) actions.push(iconButton("Revoir les erreurs", "primary", "review", () => showReview(0)));
-    actions.push(button("Résultats par thème", errors.length ? "secondary" : "primary", showTopicResults));
+    const practice = experience.pending(attempt);
+    const mastered = experience.cases.filter(({index}) => experience.mastered(attempt, index)).length;
+    blocks.push(fixed(() => {
+      const card = element("section", "card mastery-card");
+      card.append(element("h2", "section-title", "Décisions maîtrisées"),
+        element("p", "", mastered + " sur " + questions.length +
+          (practice.length ? " · " + numberLabel(practice.length, "situation à retravailler", "situations à retravailler") : " · Toutes les règles ont été appliquées.")));
+      const controls = element("div", "actions");
+      controls.append(button("Résultats par thème", "secondary", showTopicResults));
+      if (errors.length) controls.append(button("Revoir les erreurs", "secondary", () => showReview(0)));
+      card.append(controls);
+      return card;
+    }));
+    const {dossier, investigation} = attempt.journey;
+    const dossierLabel = investigation ? "Reprendre l’enquête finale"
+      : dossier.every((choice) => choice !== null) ? "Voir l’enquête finale" : "Ouvrir l’enquête finale";
+    const actions = [iconButton(dossierLabel, "primary", "book", openDossier)];
+    if (attempt.journey.practice) {
+      actions.push(iconButton("Reprendre l’entraînement", "secondary", "review", () => startPractice()));
+    } else if (practice.length) {
+      actions.push(iconButton(practice.length > 1 ? "Rejouer deux situations" : "Rejouer une situation",
+        "secondary", "review", () => startPractice(practice.slice(0, 2))));
+    }
     actions.push(button("Recommencer", "secondary", (event) => {
       confirmation.returnValue = "";
       resetTrigger = event.currentTarget;
       confirmation.showModal();
     }));
-    showScreen({name: "summary", parcours: true, title: "Bilan du quiz", icon: "trophy", back: homeAction(), blocks, actions});
+    showScreen({name: "summary", parcours: true, title: "Bilan du service", icon: "trophy", back: mapAction(), blocks, actions});
   }
 
   function showTopicResults() {
-    const blocks = Array.from(tally(attempt.answers), ([theme, totals]) => fixed(() => {
+    const blocks = Array.from(experience.areas, ([theme, cases]) => fixed(() => {
+      const count = cases.filter(({index}) => experience.mastered(attempt, index)).length;
       const item = element("li");
       const bar = element("progress", "progress");
-      bar.max = totals.total;
-      bar.value = totals.correct;
+      bar.max = cases.length;
+      bar.value = count;
       bar.setAttribute("aria-hidden", "true");
-      item.append(element("span", "", theme), element("strong", "", totals.correct + " / " + totals.total), bar);
+      item.append(element("span", "", theme), element("strong", "", count + " / " + cases.length + " maîtrisées"), bar);
       return item;
     }));
     showScreen({
@@ -866,15 +1356,24 @@
   });
 
   referenceLink.closest("nav").hidden = false;
+  document.querySelector("#lien-carte").addEventListener("click", showMap);
   referenceLink.addEventListener("click", (event) => fromFragment(event, () => showThemes()));
   creditLink.hidden = false;
   creditLink.addEventListener("click", () => {
     if (currentScreen?.config.name !== "credits") showCredits();
   });
+  document.querySelector(".skip-link").addEventListener("click", (event) => fromFragment(event, () => focusOn(main)));
   document.querySelector(".brand").addEventListener("click", (event) => fromFragment(event, () => showHome()));
-  window.addEventListener("hashchange", () => {
-    if (location.hash === "#themes") showThemes();
-  });
+  function followShortcut(initial = false) {
+    if (location.hash === "#themes") showThemes(undefined, false);
+    else if (location.hash === "#carte") showMap();
+    else if (location.hash === "#reprendre") {
+      if (attempt) resumeService();
+      else showHome(false);
+    } else if (!location.hash || initial) showHome(false);
+  }
+
+  window.addEventListener("hashchange", () => followShortcut());
   window.addEventListener("resize", scheduleReflow);
   window.visualViewport?.addEventListener("resize", scheduleReflow);
   if ("ResizeObserver" in window) {
@@ -884,6 +1383,5 @@
   document.fonts?.addEventListener("loadingdone", scheduleReflow);
 
   updateStorageStatus();
-  if (location.hash === "#themes") showThemes(undefined, false);
-  else showHome(false);
+  followShortcut(true);
 })();
