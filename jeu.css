@@ -75,7 +75,6 @@ body {
 }
 
 .footer .credit-link { border: 0; background: transparent; cursor: pointer; text-align: start; }
-.footer #installer { font-weight: 700; }
 .footer .credit-link[hidden], .page-buttons[hidden] { display: none; }
 
 .quiz-screen {

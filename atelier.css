@@ -1,0 +1,350 @@
+@charset "utf-8";
+
+/* Les blocs gardent la même géométrie dans la page et dans sa sonde de mesure. */
+.quiz-screen .quiz-page > :is(
+  .atelier-card, .atelier-ticket-head, .atelier-ticket-field,
+  .atelier-notice, .atelier-signal, .atelier-decision, .atelier-verdict,
+  .atelier-reflex, .atelier-result
+) + *,
+.quiz-screen .quiz-page > * + :is(.atelier-reflex, .atelier-verdict, .atelier-notice) {
+  margin-block-start: .52rem;
+}
+
+.quiz-screen .quiz-page > :is(.button.atelier-card, .atelier-ticket-field, .button.atelier-decision) {
+  inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 44px;
+  border: 1px solid var(--paper-line);
+  background: var(--paper);
+  color: var(--game-ink);
+  font: inherit;
+  text-align: start;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.quiz-screen .quiz-page > .button.atelier-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(.55rem, 1.8vw, 1rem);
+  padding: clamp(.55rem, 1.7vw, 1rem);
+  border-radius: var(--card-radius);
+  background: linear-gradient(110deg, #fffdf5a8, transparent 85%) var(--paper);
+  box-shadow: 0 2px 0 #a17d5759;
+}
+
+.atelier-card-icon {
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  inline-size: clamp(2.15rem, 6vw, 3.28rem);
+  block-size: clamp(2.15rem, 6vw, 3.28rem);
+  padding: .45rem;
+  border: 1px solid #a17d57;
+  border-radius: 50%;
+  background: var(--felt-deep);
+  color: var(--gold-bright);
+  box-shadow: inset 0 0 0 3px var(--felt-raised);
+}
+
+.atelier-card-icon .picto {
+  inline-size: 1.2rem;
+  block-size: 1.2rem;
+}
+
+.atelier-card-copy {
+  display: grid;
+  gap: .18rem;
+  min-inline-size: 0;
+  line-height: 1.22;
+}
+
+.atelier-card-copy strong { font-size: clamp(1rem, 2.1vw, 1.23rem); }
+.atelier-card-copy small { color: var(--game-muted); font-size: .85rem; font-weight: 500; }
+.atelier-card-arrow { color: var(--game-focus-paper); }
+
+@media (min-width: 49rem) and (min-height: 31rem), (min-width: 34rem) and (orientation: landscape) {
+  .quiz-screen--mini-hub .quiz-page {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .72rem;
+  }
+
+  .quiz-screen--mini-hub .quiz-page > .atelier-card + .atelier-card {
+    margin-block-start: 0;
+  }
+}
+
+.quiz-screen:is(.quiz-screen--mini-hub, .quiz-screen--mini-decision) .page-nav:has(> .page-buttons[hidden]) {
+  display: none;
+}
+
+/* Le document et ses lignes interactives réutilisent le papier des fiches de service. */
+.quiz-screen .atelier-ticket-head {
+  padding: clamp(.72rem, 2.15vw, 1.4rem);
+  border: 1px solid var(--paper-line);
+  border-block-start: .25rem solid var(--game-focus-paper);
+  border-radius: var(--card-radius);
+  background: var(--paper);
+  color: var(--game-ink);
+}
+
+.atelier-ticket-head small {
+  display: block;
+  margin-block-end: .25rem;
+  color: var(--game-focus-paper);
+  font-size: .76rem;
+  font-weight: 750;
+  letter-spacing: .085em;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+
+.atelier-ticket-head h2 {
+  font-family: var(--title-font);
+  font-size: clamp(1.25rem, 3.15vw, 2rem);
+  font-weight: 400;
+  line-height: 1.12;
+  text-wrap: balance;
+}
+
+.atelier-ticket-head p {
+  margin-block-start: .36rem;
+  padding-block-start: .43rem;
+  border-block-start: 1px dashed #ab9177;
+  color: var(--game-muted);
+  font-size: .93rem;
+  line-height: 1.38;
+}
+
+.quiz-screen .atelier-ticket-field {
+  display: grid;
+  grid-template-columns: 1.12rem minmax(0, 1fr);
+  align-items: center;
+  gap: .16rem .65rem;
+  padding: .47rem .72rem;
+  border-radius: .52rem;
+  line-height: 1.24;
+}
+
+.atelier-ticket-field::before {
+  content: "";
+  display: block;
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  box-sizing: border-box;
+  inline-size: 1.03rem;
+  block-size: 1.03rem;
+  border: 1px solid #5b6553;
+  border-radius: .2rem;
+}
+
+.atelier-ticket-field :is(strong, span, small) { grid-column: 2; }
+.atelier-ticket-field strong { font-size: .88rem; }
+.atelier-ticket-field > span { color: var(--game-muted); font-variant-numeric: tabular-nums; }
+.atelier-ticket-field > small { color: var(--game-focus-paper); font-size: .8rem; font-weight: 700; }
+
+.quiz-screen .atelier-ticket-field[aria-pressed="true"] {
+  border-color: var(--game-focus-paper);
+  background: #f8e4c5;
+  box-shadow: inset 0 0 0 1px var(--game-focus-paper);
+}
+
+.atelier-ticket-field[aria-pressed="true"]::before {
+  inline-size: .65rem;
+  block-size: 1rem;
+  margin-inline-start: .12rem;
+  border: solid var(--game-focus-paper);
+  border-width: 0 .18rem .18rem 0;
+  border-radius: 0;
+  transform: rotate(43deg);
+}
+
+@media (min-width: 40rem) {
+  .quiz-screen .atelier-ticket-field {
+    grid-template-columns: 1.12rem minmax(8rem, .8fr) minmax(0, 1.2fr);
+    padding-block: .54rem;
+  }
+
+  .atelier-ticket-field::before { grid-row: 1; }
+  .atelier-ticket-field > span { grid-column: 3; }
+  .atelier-ticket-field > small { grid-column: 3; }
+}
+
+/* Un signal, une action, le constat et le réflexe à retenir. */
+.quiz-screen :is(.atelier-notice, .atelier-verdict, .atelier-reflex, .atelier-result) {
+  padding: clamp(.6rem, 1.7vw, 1.05rem);
+  border: 1px solid var(--paper-line);
+  border-radius: var(--card-radius);
+  background: var(--paper);
+  color: var(--game-ink);
+  line-height: 1.42;
+  overflow-wrap: anywhere;
+}
+
+.quiz-screen :is(.atelier-notice, .atelier-reflex) {
+  border-inline-start: .3rem solid #a17d49;
+  background: var(--paper-raised);
+}
+
+.quiz-screen .atelier-signal {
+  display: flex;
+  align-items: center;
+  gap: .58rem;
+  padding: .55rem .72rem;
+  border: 1px solid #a17d57;
+  border-radius: .5rem;
+  background: var(--felt-deep);
+  color: var(--gold-bright);
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.atelier-signal::before {
+  content: "";
+  flex: 0 0 .65rem;
+  block-size: .65rem;
+  border: 1px solid currentColor;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 0 3px #efc8912b;
+}
+
+.quiz-screen .atelier-decision {
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  padding: .55rem .78rem;
+  border-radius: var(--card-radius);
+  font-weight: 700;
+  line-height: 1.28;
+}
+
+.quiz-screen--mini-decision .quiz-page > .question {
+  margin-block-end: .52rem;
+  color: var(--paper);
+  font-size: clamp(1.2rem, 3.15vw, 1.8rem);
+  line-height: 1.23;
+  text-wrap: pretty;
+}
+
+.quiz-screen .atelier-verdict[data-correct="true"] {
+  border-inline-start: .3rem solid #396749;
+  background: #e6efdc;
+}
+
+.quiz-screen .atelier-verdict[data-correct="false"] {
+  border-inline-start: .3rem solid #95512a;
+  background: #f4dfca;
+}
+
+.quiz-screen :is(.atelier-verdict, .atelier-reflex, .atelier-result) > * + * {
+  margin-block-start: .27rem;
+}
+
+.atelier-verdict h2, .atelier-reflex h2 {
+  font-size: 1.02rem;
+  line-height: 1.25;
+}
+
+.quiz-screen .atelier-result {
+  border-block-start: .25rem solid #a17d49;
+  background: linear-gradient(115deg, var(--paper-raised), var(--paper));
+}
+
+.quiz-screen p.atelier-result {
+  font-family: var(--title-font);
+  font-size: clamp(1.2rem, 3.15vw, 1.75rem);
+}
+
+.quiz-screen--mini-correction .quiz-page > .source-link {
+  display: flex;
+  align-items: center;
+  min-block-size: 44px;
+  padding: .48rem .72rem;
+  border: 1px solid var(--paper-line);
+  border-radius: var(--card-radius);
+  background: var(--paper-raised);
+  color: var(--game-ink);
+  font-size: .93rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.quiz-screen--home .screen-actions > .button.atelier-entry:not(:disabled) {
+  border-color: #c99867;
+  background: #2f4436;
+  color: var(--gold-bright);
+}
+
+@media (max-width: 35rem) and (orientation: portrait) {
+  /* Le CTA d’installation occupe déjà sa propre rangée, visible ou non. */
+  .quiz-screen--home .screen-actions:has(> .atelier-entry) > .button:nth-child(5 of .button:not(.install-cta)) {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (hover: hover) {
+  .quiz-screen .quiz-page > :is(.atelier-card, .atelier-ticket-field, .atelier-decision):not(:disabled):hover {
+    border-color: #a97945;
+    background-color: #fff0d3;
+  }
+
+  .quiz-screen--mini-correction .quiz-page > .source-link:hover { background: #fff0d3; }
+
+  .quiz-screen--home .screen-actions > .button.atelier-entry:not(:disabled):hover {
+    border-color: var(--gold-bright);
+    background: var(--felt-raised);
+  }
+}
+
+.quiz-screen :is(.atelier-card, .atelier-ticket-field, .atelier-decision):focus-visible {
+  outline: 3px solid var(--game-focus);
+  outline-offset: 2px;
+}
+
+.quiz-screen :is(.atelier-card, .atelier-ticket-field, .atelier-decision):not(:disabled):active {
+  box-shadow: inset 0 0 0 2px var(--game-focus-paper);
+}
+
+.quiz-screen :is(.atelier-card, .atelier-ticket-field, .atelier-decision):disabled {
+  cursor: default;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .quiz-screen :is(.atelier-card, .atelier-ticket-field, .atelier-decision) {
+    transition: background-color var(--motion-response) ease-out, border-color var(--motion-response) ease-out;
+  }
+
+  .quiz-screen .quiz-page:not([aria-hidden]) :is(.atelier-signal, .atelier-verdict, .atelier-result) {
+    animation: atelier-reveal 170ms var(--motion-ease);
+  }
+}
+
+@keyframes atelier-reveal {
+  from { opacity: .66; }
+  to { opacity: 1; }
+}
+
+@media (forced-colors: active) {
+  .quiz-screen :is(.atelier-card, .atelier-ticket-field, .atelier-decision),
+  .atelier-card-icon, .atelier-ticket-field::before {
+    border-color: ButtonText;
+  }
+
+  .quiz-screen :is(.atelier-ticket-head, .atelier-signal, .atelier-notice,
+    .atelier-verdict[data-correct], .atelier-reflex, .atelier-result) {
+    border-color: CanvasText;
+  }
+
+  .quiz-screen .atelier-ticket-field[aria-pressed="true"] {
+    border-color: Highlight;
+    border-style: double;
+  }
+
+  .atelier-ticket-field[aria-pressed="true"]::before { border-color: ButtonText; }
+  .quiz-screen :is(.atelier-card, .atelier-ticket-field, .atelier-decision):focus-visible {
+    outline-color: Highlight;
+  }
+}

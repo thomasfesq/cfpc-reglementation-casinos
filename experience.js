@@ -14,7 +14,7 @@ window.CFPC_EXPERIENCE = (() => {
     {id: "reg-roulette-mise-tardive", prompt: "Reportez-vous aux témoignages pour reconstituer la chronologie. Comment traiter cette mise ?"},
   ];
 
-  function create(questions, stories) {
+  function create(questions, stories, missions) {
     const nonEmpty = (value) => typeof value === "string" && value.trim().length > 0;
     const validChoice = (value, options) => Number.isInteger(value) && value >= 0 && value < options.length;
     const caseList = questions.map((question, index) => {
@@ -55,6 +55,9 @@ window.CFPC_EXPERIENCE = (() => {
         practice: null,
         investigation: null,
         active: null,
+        timeline: missions.restoreTimeline(raw?.timeline),
+        unseenReactions: missions.restoreMisses(raw?.unseenReactions, caseList)
+          .filter((index) => attempt.answers[index] !== null),
       };
       const practice = raw?.practice ?? (raw?.activity?.kind === "practice" ? raw.activity : null);
       if (Array.isArray(practice?.queue) && practice.queue.length >= 1 &&
@@ -65,7 +68,8 @@ window.CFPC_EXPERIENCE = (() => {
         const index = practice.queue[practice.cursor];
         journey.practice = {queue: [...practice.queue], cursor: practice.cursor,
           draft: part(practice.draft, caseList[index].variant.options),
-          revealed: practice.revealed === true && journey.variants[index] !== null};
+          revealed: practice.revealed === true && journey.variants[index] !== null,
+          reacted: practice.reacted !== false};
       }
       const investigation = raw?.investigation ?? (raw?.activity?.kind === "dossier" ? raw.activity : null);
       if (investigation && attempt.phase === "complete") {
@@ -73,7 +77,9 @@ window.CFPC_EXPERIENCE = (() => {
           ? investigation.cursor : -1;
         journey.investigation = {cursor,
           draft: cursor === -1 ? null : part(investigation.draft, dossier[cursor].question.options),
-          revealed: cursor !== -1 && investigation.revealed === true && journey.dossier[cursor] !== null};
+          revealed: cursor !== -1 && investigation.revealed === true && journey.dossier[cursor] !== null,
+          reacted: investigation.reacted !== false,
+          timelineOpen: cursor === -1 && journey.clues === 7 && investigation.timelineOpen === true};
       }
       const active = raw?.active ?? (raw?.activity?.kind === "dossier" ? "investigation" : raw?.activity?.kind);
       if ((active === "practice" || active === "investigation") && journey[active]) journey.active = active;

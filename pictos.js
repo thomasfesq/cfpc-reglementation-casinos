@@ -42,6 +42,10 @@
       ["path", {d: "M12 3v3.5m0 11V21M3 12h3.5m11 0H21m-9-3 2.5 3-2.5 3-2.5-3Z"}]
     ],
     trophy: [["path", {d: "M8 4h8v6a4 4 0 0 1-8 0V4Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 2v4m-4 2h8"}]],
+    "app-install": [
+      ["rect", {x: 6, y: 2, width: 12, height: 20, rx: 2.5}],
+      ["path", {d: "M12 6v7m-3-3 3 3 3-3m-5 7h4"}]
+    ],
     "arrow-right": [["path", {d: "M4 12h15m-6-6 6 6-6 6"}]],
     "arrow-left": [["path", {d: "M20 12H5m6 6-6-6 6-6"}]]
   };

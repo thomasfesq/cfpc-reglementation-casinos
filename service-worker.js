@@ -2,7 +2,7 @@
 
 const scope = self.registration.scope;
 const cachePrefix = "cfpc-quiz:" + scope + ":";
-const cacheName = cachePrefix + "fc804adc6b31d0a0";
+const cacheName = cachePrefix + "9f07926828328f96";
 
 // Each install verifies the exact bytes of the whole version before activation.
 const assets = {
@@ -17,18 +17,24 @@ const assets = {
   "assets/themes.png": "sha256-JnrgiiMZwmdp++qtxiTTOK81v/qNacMPws68/ALp9n0=",
   "assets/work-sans-bold.ttf": "sha256-6DmLIiJaH5cd+bsS+o+53Ux26Aqk1n1FveYOu8bFrYE=",
   "assets/work-sans-regular.ttf": "sha256-oTHnAis07xlQqda92hb11FCcwf4a9ZkaRVL+vSpAJ+U=",
-  "experience.css?v=5ba7be7f10a6": "sha256-W6e+fxCmHaEeqLkLwRDrqtfFt4FeRi5+uXPazEDlZms=",
-  "experience.js?v=f9f7646ed188": "sha256-+fdkbtGI4fv3GquK3H1gj0BGhQK+CczTQ95QH7xVF0M=",
+  "atelier-cas.js?v=9261d3d33d7a": "sha256-kmHT0z16qyaOKVsu6rcDv/iTklni+1QRh3+h7JWXNdk=",
+  "atelier.css?v=3d701f1d4dab": "sha256-PXAfHU2ruq/atng1QipfQ0PjrCz5XMh5P/T+89idXSY=",
+  "carnet-cas.js?v=7d90af204936": "sha256-fZCvIEk2vzvYpBMCAjgqBfT+JgZYe+GoPoFD4ApbIvQ=",
+  "carnet.css?v=c74860e0a6de": "sha256-x0hg4KbedOJhAnFhR6fIC/1EVppAucBtbIR9nnYq+L0=",
+  "experience.css?v=3532ba7e943f": "sha256-NTK6fpQ/Jd+8+dhymFgQlnOEh+iWrnfcwkwI6jSdJmk=",
+  "experience.js?v=c9d0be609b79": "sha256-ydC+YJt507Fb3WKFZoV1OnlJ1Xwd8GiJycnYPpp5jWU=",
   "histoires.js?v=a52646a95c1b": "sha256-pSZGqVwbkOLxh6Y1UEDBTQtBgJ9xgt3CMoPBQ0qa0cA=",
-  "index.html": "sha256-Te+f6/5DtREx9VIQ2idM5FNd9PUGI637VY4YfozQidc=",
-  "installation.js?v=214fdf706634": "sha256-IU/fcGY0bf/c13FyJx8/4BD51uHQZI1Xvrj6q9LHtT0=",
-  "jeu.css?v=ef26f8592002": "sha256-7yb4WSACox2iw6BVzfrpK4DYEfnQUe7D4oVjjFw4FsA=",
+  "index.html": "sha256-CRJy47ZjIxuxcRjH+FyUwbhARN0I+sJuuX9D6Ni27Bg=",
+  "installation.js?v=b9ed36b9fb32": "sha256-ue02ufsyl1jD8thAPuwvr8FxDaUnh3nbhhalA/6K6Y8=",
+  "jeu.css?v=3b065861788e": "sha256-OwZYYXiOJqARglAIFbeOqUx3rFkviYsXbAYfARSRPzo=",
   "manifest.webmanifest": "sha256-9vdtJ0uShf4J5tHizu8495bxrFer/ryNT9X/tGxmzbk=",
+  "missions.js?v=1985e5ce2592": "sha256-GYXlziWS3wtbT0x5n0n1E2wZRwbUB5xbAFYqrcmFG4g=",
   "parcours.css?v=d037b6d45264": "sha256-0De21FJkn2ykhi5KfDM4KLZ3F9/JXGtwrC29ko2HA68=",
-  "pictos.js?v=88bcad14018c": "sha256-iLytFAGMDCduDW/6tS78+V5Wq3Q2P+0zO0ZQch/UFHk=",
+  "pictos.js?v=034c9591f1ce": "sha256-A0yVkfHOGXcwqSanKyhA+JycSpKp7RXnQIakjecotVQ=",
   "questions.js?v=2816850df785": "sha256-KBaFDfeFXB0giXlwH5PgaXkeRionW4LzxJ1OYR2X8P4=",
-  "quiz-jeu.js?v=0d1925a56470": "sha256-DRklpWRwL4KU/5/XiIp7nOCVwnu1gnhVoNHx6kpXBFc=",
-  "styles.css?v=5b145468afda": "sha256-WxRUaK/aLdbAicJUbmnuehfc5ZKn9EpTbcyZDb37/nI="
+  "quiz-jeu.js?v=c21a44a03851": "sha256-whpEoDhRvEr7GtPi+c0omMtp3lFsdJIx1Hu9maZJcf8=",
+  "styles.css?v=5b145468afda": "sha256-WxRUaK/aLdbAicJUbmnuehfc5ZKn9EpTbcyZDb37/nI=",
+  "terrain.js?v=f3f33cabd76c": "sha256-8/M8q9dsLELyyTLALWyg802LBnbKzHj1vIeiOA71lrM="
 };
 const urls = new Map(Object.entries(assets).map(([path, integrity]) =>
   [new URL(path, scope).href, integrity]));

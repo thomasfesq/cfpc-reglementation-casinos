@@ -11,14 +11,20 @@
   <link rel="apple-touch-icon" href="./assets/cfpc-192.png">
   <link rel="stylesheet" href="./styles.css?v=5b145468afda">
   <link rel="stylesheet" href="./parcours.css?v=d037b6d45264">
-  <link rel="stylesheet" href="./jeu.css?v=ef26f8592002">
-  <link rel="stylesheet" href="./experience.css?v=5ba7be7f10a6">
+  <link rel="stylesheet" href="./jeu.css?v=3b065861788e">
+  <link rel="stylesheet" href="./experience.css?v=3532ba7e943f">
+  <link rel="stylesheet" href="./atelier.css?v=3d701f1d4dab">
+  <link rel="stylesheet" href="./carnet.css?v=c74860e0a6de">
   <script src="./questions.js?v=2816850df785" defer></script>
-  <script src="./pictos.js?v=88bcad14018c" defer></script>
+  <script src="./pictos.js?v=034c9591f1ce" defer></script>
   <script src="./histoires.js?v=a52646a95c1b" defer></script>
-  <script src="./experience.js?v=f9f7646ed188" defer></script>
-  <script src="./quiz-jeu.js?v=0d1925a56470" defer></script>
-  <script src="./installation.js?v=214fdf706634" defer></script>
+  <script src="./missions.js?v=1985e5ce2592" defer></script>
+  <script src="./terrain.js?v=f3f33cabd76c" defer></script>
+  <script src="./experience.js?v=c9d0be609b79" defer></script>
+  <script src="./installation.js?v=b9ed36b9fb32" defer></script>
+  <script src="./atelier-cas.js?v=9261d3d33d7a" defer></script>
+  <script src="./carnet-cas.js?v=7d90af204936" defer></script>
+  <script src="./quiz-jeu.js?v=c21a44a03851" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -40,7 +46,6 @@
     <span>CFPC · Réglementation française vérifiée le <time datetime="2026-11-22">22 novembre 2026</time></span>
     <span id="statut-stockage" role="status">Progression enregistrée sur cet appareil</span>
     <button id="lien-conception" class="credit-link" type="button" hidden>Références de conception</button>
-    <button id="installer" class="credit-link" type="button" hidden>Installer le quiz</button>
   </footer>
 
   <template id="modele-credits">
@@ -60,6 +65,17 @@
       <div class="actions dialog-actions">
         <button class="button secondary" value="cancel" autofocus>Annuler</button>
         <button class="button primary" value="reset">Recommencer</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="aide-installation" aria-labelledby="titre-installation">
+    <form method="dialog">
+      <h2 id="titre-installation" tabindex="-1" autofocus>Installer CFPC</h2>
+      <p><strong>iPhone ou iPad</strong><br>Ouvrez CFPC dans Safari. Touchez <b>Partager</b> (parfois dans le menu de la page), puis <b>Sur l’écran d’accueil</b>. Activez <b>Ouvrir comme app web</b> si l’option apparaît, puis touchez <b>Ajouter</b>.</p>
+      <p><strong>Android</strong><br>Dans le menu ⋮ de Chrome, choisissez <b>Installer et créer un raccourci</b>, puis <b>Installer</b>. Selon la version, l’option peut s’appeler <b>Ajouter à l’écran d’accueil</b>.</p>
+      <div class="actions dialog-actions">
+        <button class="button primary">Fermer</button>
       </div>
     </form>
   </dialog>
