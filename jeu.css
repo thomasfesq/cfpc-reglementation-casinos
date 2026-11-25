@@ -226,7 +226,7 @@ body {
 .quiz-screen--home .hero-title {
   margin-block-start: clamp(.45rem, 2vh, 1rem);
   color: var(--paper);
-  font-size: clamp(2rem, 5.5vw, 4.8rem);
+  font-size: clamp(2rem, 5.5vw, 4.4rem);
   line-height: 1.02;
   text-wrap: balance;
 }
@@ -374,6 +374,32 @@ body {
 .quiz-screen.quiz-parcours .option:has(input:checked) { border-color: #b78138; background: #f9e4b9; }
 .quiz-screen.quiz-parcours .option.correct { border-color: #7ba184; background: #e1f0df; }
 .quiz-screen.quiz-parcours .option.incorrect { border-color: #bc8569; background: #fae9dc; }
+
+/* Conserver la place de chaque carte : l’état se lit aussi dans son repère latéral. */
+@media (forced-colors: none) {
+  .quiz-screen.quiz-parcours .option:has(input:checked):not(.correct):not(.incorrect) {
+    background-color: #ffedc9;
+    box-shadow: inset .3rem 0 #84591e;
+  }
+  .quiz-screen.quiz-parcours .option.correct {
+    border-color: #397357;
+    background-color: #e3f2e5;
+    box-shadow: inset .3rem 0 #28603f;
+  }
+  .quiz-screen.quiz-parcours .option.incorrect {
+    border-color: #9d563a;
+    background-color: #fbebe1;
+    box-shadow: inset .3rem 0 #8e4935;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .quiz-screen.quiz-parcours .option:has(input:enabled) {
+    transition: border-color 140ms ease-out, background-color 140ms ease-out;
+  }
+  .quiz-screen.quiz-parcours .option:has(input:enabled):hover {
+    border-color: #77521f;
+  }
+}
 .quiz-screen.quiz-parcours .option-key {
   min-inline-size: 1.68rem;
   min-block-size: 1.68rem;
