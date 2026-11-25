@@ -614,3 +614,201 @@ p.journey-hero-copy { max-inline-size: 24ch; font-size: clamp(1.48rem, 3.35vw, 3
     justify-content: center;
   }
 }
+
+
+.scene-card { position: relative; }
+
+.scene-loupe {
+  position: absolute;
+  z-index: 2;
+  inset: .42rem .42rem auto auto;
+  display: grid;
+  place-items: center;
+  inline-size: 44px;
+  block-size: 44px;
+  padding: 0;
+  border: 1px solid var(--gold-bright);
+  border-radius: 50%;
+  background: #102b22;
+  color: var(--gold-bright);
+  font: 700 1.35rem/1 system-ui, sans-serif;
+  cursor: pointer;
+}
+
+.scene-loupe:is(:hover, [aria-pressed="true"]) { background: var(--gold-bright); color: var(--felt-deep); }
+.scene-loupe:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
+.scene-card[data-closeup] > .scene-art::before,
+.scene-card[data-closeup] > .scene-art::after { scale: 1.32; }
+
+.clue-progress {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .45rem .7rem;
+  margin-block-start: .65rem;
+  color: var(--journey-ivory);
+  font-size: .79rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.clue-marks { display: inline-flex; gap: .24rem; }
+.clue-mark {
+  display: grid;
+  place-items: center;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border: 1px solid #8da497;
+  border-radius: .26rem;
+  color: var(--journey-ivory);
+}
+
+.clue-mark[data-read] {
+  border-color: var(--gold);
+  background: var(--gold);
+  color: var(--felt-deep);
+}
+
+.clue-mark > .picto { inline-size: .9rem; block-size: .9rem; }
+
+@media (19rem <= width < 62rem) {
+  .floor-plan {
+    z-index: 3;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(44px, 1fr));
+    place-content: center end;
+    justify-items: center;
+    gap: .24rem;
+    padding: .45rem;
+  }
+
+  .floor-plan .journey-hero-image { position: absolute; inset: 0; pointer-events: none; }
+
+  .floor-pin {
+    position: relative;
+    display: grid;
+    place-items: center;
+    inline-size: 44px;
+    block-size: 44px;
+    padding: 0;
+    border: 1px solid var(--gold-bright);
+    border-radius: 50%;
+    background: var(--felt-deep);
+    color: var(--gold-bright);
+    cursor: pointer;
+    box-shadow: 0 .2rem .5rem rgb(0 0 0 / 50%);
+  }
+
+  .floor-pin:is(:hover, :focus-visible) { background: var(--gold-bright); color: var(--felt-deep); }
+}
+
+@media (19rem <= width <= 35rem) {
+  .floor-plan {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    align-content: center;
+    gap: .16rem;
+    padding-inline: .43rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .scene-card > .scene-art::before, .scene-card > .scene-art::after {
+    transition: scale 270ms cubic-bezier(.22,.8,.3,1);
+  }
+}
+
+@media (forced-colors: active) {
+  .scene-loupe, .clue-mark { border-color: ButtonText; }
+  .scene-loupe:focus-visible { outline-color: Highlight; }
+  .clue-mark[data-read] { border-width: 2px; }
+}
+
+/* Effets du parcours CFPC dans les tons du tapis, du cuivre et de l’ivoire. */
+.quiz-screen :is(.floor-pin, .scene-loupe):focus-visible {
+  outline: 3px solid var(--gold-bright);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 3px var(--felt-deep);
+}
+
+.quiz-screen :is(.floor-pin, .scene-loupe):active {
+  background: var(--gold-bright);
+  border-color: var(--gold-bright);
+  color: var(--felt-deep);
+}
+
+@media (forced-colors: active) {
+  .quiz-screen :is(.floor-pin, .scene-loupe):focus-visible { outline-color: Highlight; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .quiz-screen--home .hero-visual .hero-photo {
+    animation: cfpc-photo-arrival 720ms cubic-bezier(.18, .72, .24, 1);
+  }
+
+  .quiz-page:not([aria-hidden]) :is(.journey-hero, .scene-card) {
+    animation: none;
+  }
+
+  .quiz-page:not([aria-hidden]) .floor-plan .journey-hero-image,
+  .quiz-page:not([aria-hidden]) .scene-card > .scene-art {
+    animation: cfpc-image-reveal 440ms ease-out;
+  }
+
+  .quiz-page:not([aria-hidden]) .floor-pin {
+    --pin-delay: clamp(0ms, calc(var(--pin-order, 0) * 50ms), 300ms);
+  }
+
+  .quiz-page:not([aria-hidden]) .floor-pin > .picto,
+  .quiz-page:not([aria-hidden]) .floor-pin::after {
+    animation: cfpc-pin-arrival 380ms cubic-bezier(.16, .72, .25, 1) var(--pin-delay);
+  }
+
+  .quiz-page:not([aria-hidden]) .scene-dialogue {
+    animation: cfpc-dialogue-arrival 430ms ease-out 75ms backwards;
+  }
+
+  .quiz-page:not([aria-hidden]) .clue-card[data-just-read] > .picto,
+  .quiz-page:not([aria-hidden]) .clue-mark[data-just-read] > .picto {
+    animation: cfpc-mark-arrival 310ms cubic-bezier(.19, .68, .36, 1.18);
+  }
+
+  .quiz-screen--feedback .score-chip.earned.current .picto {
+    animation: cfpc-mark-arrival 360ms cubic-bezier(.19, .68, .36, 1.18);
+  }
+
+  .quiz-page:not([aria-hidden]) .journey-stamp {
+    animation: cfpc-stamp-arrival 400ms ease-out 100ms backwards;
+  }
+
+  @keyframes cfpc-photo-arrival {
+    from { opacity: .65; scale: 1.045; }
+    to { opacity: 1; scale: 1; }
+  }
+
+  @keyframes cfpc-image-reveal {
+    from { opacity: .62; }
+    to { opacity: 1; }
+  }
+
+  @keyframes cfpc-pin-arrival {
+    0% { opacity: .66; scale: .78; }
+    55% { opacity: 1; scale: 1.13; }
+    100% { opacity: 1; scale: 1; }
+  }
+
+  @keyframes cfpc-dialogue-arrival {
+    from { opacity: .84; border-color: var(--journey-copper); }
+    to { opacity: 1; }
+  }
+
+  @keyframes cfpc-mark-arrival {
+    0% { scale: .75; rotate: -12deg; }
+    65% { scale: 1.13; rotate: 4deg; }
+    100% { scale: 1; rotate: 0deg; }
+  }
+
+  @keyframes cfpc-stamp-arrival {
+    0% { box-shadow: inset 0 0 0 0 rgb(133 96 59 / 35%); }
+    42% { box-shadow: inset 0 0 0 .2rem rgb(133 96 59 / 35%); }
+    100% { box-shadow: inset 0 0 0 0 rgb(133 96 59 / 0%); }
+  }
+}

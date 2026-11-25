@@ -730,11 +730,31 @@
   }
 
   function sceneBlock(index) {
-    return fixed(() => {
+    let closeup = false;
+    const block = fixed(() => {
       const card = element("div", "scene-card");
-      card.append(sceneArt(index));
+      const lens = element("button", "scene-loupe");
+      const sign = element("span");
+      lens.type = "button";
+      lens.dataset.quizFocus = "scene-closeup";
+      lens.setAttribute("aria-label", "Agrandir l’image");
+      sign.setAttribute("aria-hidden", "true");
+      lens.append(sign);
+      const update = () => {
+        card.toggleAttribute("data-closeup", closeup);
+        lens.setAttribute("aria-pressed", String(closeup));
+        sign.textContent = closeup ? "−" : "+";
+      };
+      lens.addEventListener("click", () => {
+        closeup = !closeup;
+        update();
+      });
+      update();
+      card.append(sceneArt(index), lens);
       return card;
     });
+    block.key = "scene";
+    return block;
   }
 
   function dialogue(speaker, line) {
@@ -798,6 +818,8 @@
       art.src = "./assets/carte-salle.webp";
       art.alt = "";
       const plan = element("div", "floor-plan");
+      plan.setAttribute("role", "group");
+      plan.setAttribute("aria-label", "Accès aux espaces de la salle");
       plan.append(art);
       for (const [index, {theme, status}] of areas.entries()) {
         if (!pins[index]) continue;
@@ -805,6 +827,8 @@
         pin.type = "button";
         pin.title = theme;
         pin.dataset.status = status;
+        pin.dataset.quizFocus = "floor-" + theme;
+        pin.style.setProperty("--pin-order", index);
         pin.style.setProperty("--pin-x", pins[index][0] + "%");
         pin.style.setProperty("--pin-y", pins[index][1] + "%");
         pin.setAttribute("aria-label", "Ouvrir sur la carte · " + theme);
@@ -921,7 +945,21 @@
     const journey = attempt.journey;
     const intro = fixed(() => {
       const item = element("li", "dossier-intro");
-      item.append(element("p", "", "Deux situations ont marqué la prise de service. Consultez les trois indices de vos collègues, puis consignez vos deux décisions."));
+      const marks = element("span", "clue-marks");
+      marks.setAttribute("aria-hidden", "true");
+      let seenCount = 0;
+      for (const [index] of experience.clues.entries()) {
+        const seen = !!(journey.clues & (1 << index));
+        if (seen) seenCount += 1;
+        const mark = element("span", "clue-mark");
+        mark.toggleAttribute("data-read", seen);
+        mark.toggleAttribute("data-just-read", seen && reveal === "clue-" + index);
+        mark.append(icon(seen ? "check" : "book"));
+        marks.append(mark);
+      }
+      const progress = element("div", "clue-progress");
+      progress.append(marks, element("span", "", seenCount + " / " + experience.clues.length + " indices lus"));
+      item.append(element("p", "", "Deux situations ont marqué la prise de service. Consultez les trois indices de vos collègues, puis consignez vos deux décisions."), progress);
       return item;
     });
     const clues = experience.clues.map(({title, source}, index) => {
@@ -932,6 +970,7 @@
         clue.type = "button";
         clue.dataset.seen = String(seen);
         clue.dataset.quizFocus = "clue-" + index;
+        clue.toggleAttribute("data-just-read", seen && reveal === clue.dataset.quizFocus);
         const label = element("span", "clue-title");
         label.append(element("strong", "", title), element("small", "", source));
         clue.append(icon(seen ? "check" : "book"), label, element("span", "clue-state", seen ? "Lu" : "À lire"));
