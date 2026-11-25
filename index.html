@@ -6,12 +6,16 @@
   <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0a211b">
   <title>Réglementation des jeux en casino | CFPC</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./assets/cfpc-192.png">
+  <link rel="apple-touch-icon" href="./assets/cfpc-192.png">
   <link rel="stylesheet" href="./styles.css?v=5b145468afda">
   <link rel="stylesheet" href="./parcours.css?v=d037b6d45264">
-  <link rel="stylesheet" href="./jeu.css?v=f72e37b523be">
+  <link rel="stylesheet" href="./jeu.css?v=ef26f8592002">
   <script src="./questions.js?v=2816850df785" defer></script>
   <script src="./pictos.js?v=88bcad14018c" defer></script>
-  <script src="./quiz-jeu.js?v=9f5919bc7c65" defer></script>
+  <script src="./quiz-jeu.js?v=07f41c58bb7c" defer></script>
+  <script src="./installation.js?v=214fdf706634" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#contenu">Aller au contenu</a>
@@ -30,8 +34,9 @@
 
   <footer class="frame footer">
     <span>CFPC · Réglementation française vérifiée le <time datetime="2026-11-22">22 novembre 2026</time></span>
-    <span id="statut-stockage">Progression enregistrée sur cet appareil</span>
+    <span id="statut-stockage" role="status">Progression enregistrée sur cet appareil</span>
     <button id="lien-conception" class="credit-link" type="button" hidden>Références de conception</button>
+    <button id="installer" class="credit-link" type="button" hidden>Installer le quiz</button>
   </footer>
 
   <template id="modele-credits">
@@ -40,6 +45,7 @@
       <li><a target="_blank" rel="noopener noreferrer" href="https://docusaurus.io/showcase">Docusaurus Showcase</a> — accès aux références par sujet.</li>
       <li><a target="_blank" rel="noopener noreferrer" href="https://www.typeui.sh/ui-animations">TypeUI</a> — ouverture des rubriques et retour visuel.</li>
       <li><a target="_blank" rel="noopener noreferrer" href="https://motion.dev/examples">Motion</a> — transitions courtes entre les états d’une réponse.</li>
+      <li><a target="_blank" rel="noopener noreferrer" href="https://support.kahoot.com/hc/en-us/articles/360021489353-How-to-use-self-study-modes-in-the-Kahoot-app">Kahoot!</a> — progression et retour pédagogique en autonomie.</li>
     </ul>
   </template>
 

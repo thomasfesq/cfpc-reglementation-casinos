@@ -74,18 +74,30 @@
   let saved = true;
   let updatedCatalogue = false;
   let resetTrigger = null;
-  let attempt = recover();
+  let storedRecord;
+  let restoredFromAnotherWindow = false;
+  let attempt = recover(readRecord());
 
   function updateStorageStatus() {
-    storageStatus.textContent = saved
-      ? "Progression enregistrée sur cet appareil"
-      : "Progression conservée pendant cette session";
+    storageStatus.textContent = restoredFromAnotherWindow
+      ? "Progression récupérée depuis l’autre fenêtre"
+      : saved ? "Progression enregistrée sur cet appareil" : "Progression conservée pendant cette session";
   }
 
-  function recover() {
+  function readRecord() {
     try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) return null;
+      return localStorage.getItem(storageKey);
+    } catch {
+      return undefined;
+    }
+  }
+
+  function recover(raw) {
+    storedRecord = raw;
+    saved = raw !== undefined;
+    updatedCatalogue = false;
+    if (!raw) return null;
+    try {
       const record = JSON.parse(raw);
       if (!record || typeof record !== "object") return null;
       if (record.revision !== revisionKey) {
@@ -116,14 +128,50 @@
       (value.draft === null || (value.answers[value.position] === null && validOption(value.draft, value.position)));
   }
 
-  function store() {
-    try {
-      localStorage.setItem(storageKey, JSON.stringify({revision: revisionKey, attempt}));
-      saved = true;
-    } catch {
-      saved = false;
+  function saveAttempt(change, afterSave) {
+    const previous = attempt;
+    function commit() {
+      if (attempt !== previous) return;
+      const latest = readRecord();
+      if (latest !== undefined && latest !== storedRecord) {
+        attempt = recover(latest);
+        restoredFromAnotherWindow = true;
+        updateStorageStatus();
+        if (!attempt) showHome();
+        else if (attempt.phase === "complete") showSummary();
+        else showQuestion(true);
+        return;
+      }
+      if (change() === false) return;
+
+      restoredFromAnotherWindow = false;
+      try {
+        const record = JSON.stringify({revision: revisionKey, attempt});
+        localStorage.setItem(storageKey, record);
+        storedRecord = record;
+        saved = true;
+      } catch {
+        saved = false;
+      }
+      updateStorageStatus();
+      afterSave();
     }
-    updateStorageStatus();
+
+    // The comparison and write share one lock across tabs and installed windows.
+    // Without Web Locks, the comparison still catches an already committed change.
+    const locks = navigator.locks;
+    if (!locks) {
+      commit();
+      return;
+    }
+    let started = false;
+    locks.request(storageKey, () => {
+      started = true;
+      commit();
+    }).catch((error) => {
+      if (!started) commit();
+      else console.error(error);
+    });
   }
 
   function countAnswered() {
@@ -178,6 +226,7 @@
   function makePage(config) {
     const page = element(config.pageTag || "div", ["quiz-page", config.pageClass].filter(Boolean).join(" "));
     if (!config.pageTag) page.setAttribute("role", config.questionLabel ? "radiogroup" : "region");
+    if (config.choiceCount) page.style.setProperty("--choice-count", config.choiceCount);
     return page;
   }
 
@@ -329,16 +378,17 @@
 
   function progressTrack(value, total) {
     const track = element("div", "score-track");
-    const count = element("p", "counter", "Réponses validées : " + value + " / " + total);
+    const count = element("p", "counter", "Questions traitées : " + value + " / " + total);
     const bar = element("progress", "progress");
     bar.max = total;
     bar.value = value;
-    bar.setAttribute("aria-label", "Progression des réponses validées");
+    bar.setAttribute("aria-label", "Progression dans le quiz");
     const chips = element("div", "chip-list");
     chips.setAttribute("aria-hidden", "true");
     for (let index = 0; index < Math.min(total, 12); index += 1) {
       const finished = (index + 1) / Math.min(total, 12) <= value / total;
       const chip = element("span", "score-chip" + (finished ? " earned" : ""));
+      if (index === attempt.position) chip.classList.add("current");
       chip.append(icon("chip"));
       chips.append(chip);
     }
@@ -547,10 +597,10 @@
   }
 
   function start() {
-    updatedCatalogue = false;
-    attempt = {phase: "active", position: 0, draft: null, answers: Array(questions.length).fill(null)};
-    store();
-    showQuestion();
+    saveAttempt(() => {
+      updatedCatalogue = false;
+      attempt = {phase: "active", position: 0, draft: null, answers: Array(questions.length).fill(null)};
+    }, showQuestion);
   }
 
   function promptBlock(question) {
@@ -592,6 +642,7 @@
   }
 
   function optionBlocks(question, choice, validate) {
+    const position = attempt.position;
     return question.options.map((label, index) => {
       const key = "option-" + index;
       const correct = choice !== null && index === question.answer;
@@ -617,9 +668,10 @@
           if (continued || text !== label) input.setAttribute("aria-label", label);
           input.addEventListener("change", () => {
             if (!input.checked) return;
-            attempt.draft = index;
-            validate.disabled = false;
-            store();
+            saveAttempt(() => {
+              if (attempt.position !== position || attempt.answers[position] !== null) return false;
+              attempt.draft = index;
+            }, () => { validate.disabled = false; });
           });
           option.append(input);
         }
@@ -673,15 +725,15 @@
     validate.prepend(icon("check"));
     showScreen({
       name: "question", parcours: true, title: context, back: homeAction(), progress: true, focusPrompt: true,
-      questionLabel: question.question,
+      questionLabel: question.question, choiceCount: question.options.length,
       blocks: [promptBlock(question), ...optionBlocks(question, choice, validate)], actions: [validate],
       reveal: restoreDraft && attempt.draft !== null ? "option-" + attempt.draft : null,
       submit() {
-        if (attempt.position !== index || attempt.draft === null || attempt.answers[index] !== null) return;
-        attempt.answers[index] = attempt.draft;
-        attempt.draft = null;
-        store();
-        showFeedback(question, attempt.answers[index], context);
+        saveAttempt(() => {
+          if (attempt.position !== index || attempt.draft === null || attempt.answers[index] !== null) return false;
+          attempt.answers[index] = attempt.draft;
+          attempt.draft = null;
+        }, () => showFeedback(question, attempt.answers[index], context));
       },
     });
   }
@@ -692,12 +744,11 @@
     const correct = choice === question.answer;
     const next = iconButton(last ? "Voir le bilan" : "Question suivante", "primary",
       last ? "trophy" : "arrow-right", () => {
-        if (attempt.position !== index) return;
-        if (last) attempt.phase = "complete";
-        else attempt.position += 1;
-        store();
-        if (last) showSummary();
-        else showQuestion();
+        saveAttempt(() => {
+          if (attempt.position !== index || attempt.phase !== "active" || attempt.answers[index] === null) return false;
+          if (last) attempt.phase = "complete";
+          else attempt.position += 1;
+        }, last ? showSummary : showQuestion);
       });
     showScreen({
       name: "feedback", parcours: true, title: correct ? "Bonne réponse" : "Réponse incorrecte",
@@ -826,6 +877,9 @@
   });
   window.addEventListener("resize", scheduleReflow);
   window.visualViewport?.addEventListener("resize", scheduleReflow);
+  if ("ResizeObserver" in window) {
+    new ResizeObserver(scheduleReflow).observe(document.querySelector(".footer"));
+  }
   document.fonts?.ready.then(scheduleReflow);
   document.fonts?.addEventListener("loadingdone", scheduleReflow);
 
