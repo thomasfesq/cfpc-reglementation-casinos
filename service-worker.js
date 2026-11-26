@@ -2,7 +2,7 @@
 
 const scope = self.registration.scope;
 const cachePrefix = "cfpc-quiz:" + scope + ":";
-const cacheName = cachePrefix + "c4ab3654e67bd9cc";
+const cacheName = cachePrefix + "4ac71bf7b9535806";
 
 // Each install verifies the exact bytes of the whole version before activation.
 const assets = {
@@ -40,6 +40,12 @@ const urls = new Map(Object.entries(assets).map(([path, integrity]) =>
   [new URL(path, scope).href, integrity]));
 const entry = new URL("index.html", scope).href;
 
+async function previousCaches() {
+  const keys = await caches.keys();
+  return keys.filter((key) => key.startsWith(cachePrefix) && key !== cacheName &&
+    /^[a-f0-9]{16}$/.test(key.slice(cachePrefix.length)));
+}
+
 async function fetchVerified(url, integrity) {
   const response = await fetch(url, { integrity, cache: "no-store", mode: "same-origin" });
   if (!response.ok) throw new Error("Ressource CFPC indisponible : " + url);
@@ -51,23 +57,36 @@ async function fetchVerified(url, integrity) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil((async () => {
-    const cache = await caches.open(cacheName);
     const entries = await Promise.all(Array.from(urls, async ([url, integrity]) =>
       [url, await fetchVerified(url, integrity)]));
-    await Promise.all(entries.map(([url, response]) => cache.put(url, response)));
+    try {
+      const cache = await caches.open(cacheName);
+      for (const [url, response] of entries) await cache.put(url, response);
+    } catch (error) {
+      await caches.delete(cacheName).catch(() => {});
+      throw error;
+    }
+    // The next launch can use the verified version even if the network is already gone.
+    await self.skipWaiting();
   })());
 });
 
 self.addEventListener("activate", (event) => {
-  // An update waits for older tabs to close before their offline files are retired.
   event.waitUntil((async () => {
-    const keys = await caches.keys();
-    await Promise.all(keys
-      .filter((key) => key.startsWith(cachePrefix) && key !== cacheName)
-      .map((key) => caches.delete(key)));
+    // Keep the active predecessor and any version that was already waiting in an older client.
+    const keys = await previousCaches();
+    await Promise.allSettled(keys.slice(0, -2).map((key) => caches.delete(key)));
     await self.clients.claim();
   })());
 });
+
+async function previousAsset(url) {
+  for (const name of (await previousCaches()).reverse()) {
+    const response = await caches.match(url, {cacheName: name});
+    if (response) return response;
+  }
+  return Response.error();
+}
 
 self.addEventListener("fetch", (event) => {
   const { request } = event;
@@ -78,7 +97,14 @@ self.addEventListener("fetch", (event) => {
   const isEntry = request.mode === "navigate" && (path === scope || path === entry);
   const key = isEntry ? entry : url.href;
   const integrity = urls.get(key);
-  if (!integrity) return;
+  if (!integrity) {
+    // A tab opened under the previous worker may still ask for an exact versioned asset.
+    if (url.href.startsWith(scope) && /\.(?:css|js)$/.test(url.pathname) &&
+        /^\?v=[a-f0-9]{12}$/.test(url.search)) {
+      event.respondWith(previousAsset(url.href));
+    }
+    return;
+  }
 
   event.respondWith((async () => {
     let stored;
