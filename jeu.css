@@ -203,8 +203,18 @@ body {
 .screen-actions { justify-content: end; margin-inline-start: auto; }
 
 /* Ouverture du parcours. La photo locale donne son repère à la table. */
-.quiz-screen--home { grid-template-rows: minmax(0, 1fr) auto; }
-.quiz-compact-fallback .quiz-screen--home { grid-template-rows: auto auto; }
+.quiz-home body {
+  block-size: auto;
+  min-block-size: 100dvh;
+  grid-template-rows: auto minmax(min-content, 1fr) auto;
+}
+
+.quiz-screen--home {
+  block-size: auto;
+  min-block-size: 100%;
+  grid-template-rows: minmax(min-content, 1fr) auto;
+}
+
 .quiz-screen--home .quiz-screen-head:empty { display: none; }
 .quiz-screen--home .quiz-stage {
   display: grid;
@@ -259,6 +269,12 @@ body {
 .quiz-screen--home .hero-visual::after { z-index: 1; inset: .55rem; border-radius: 0 .62rem .62rem 0; border-color: rgb(255 223 173 / 65%); }
 .quiz-screen--home .notice { margin-block-start: var(--game-gap); padding: .65rem .85rem; background: var(--paper); color: var(--game-ink); }
 .quiz-screen--home .screen-actions { margin-inline-start: 0; }
+.quiz-screen--home .screen-actions > .button { min-block-size: 44px; }
+
+@media (max-width: 64rem) {
+  .quiz-screen--home { grid-template-rows: auto auto; align-content: start; }
+  .quiz-screen--home .page-nav { padding-block-start: 0; border-block-start: 0; }
+}
 
 /* Six repères éditoriaux et accès direct à la source. */
 .quiz-screen .themes { margin: 0; padding: 0; border: 0; }
@@ -578,7 +594,7 @@ body {
 }
 
 @media (max-width: 35rem) {
-  .quiz-screen--home { --hero-photo-size: clamp(6rem, 26vw, 10rem); }
+  .quiz-screen--home { --hero-photo-size: clamp(5rem, 22vw, 8rem); }
   .main.frame, .footer.frame { inline-size: calc(100% - 1.25rem); }
   .quiz-screen-head { display: grid; grid-template-columns: auto minmax(0, 1fr); }
   .screen-heading { justify-self: end; text-align: end; }
@@ -587,7 +603,8 @@ body {
   .chip-list { max-inline-size: 16rem; }
   .quiz-screen--home .quiz-stage { grid-template-columns: minmax(0, 1fr); align-content: start; }
   .quiz-screen--home .hero-copy { padding: calc(var(--hero-photo-size) + .7rem) .9rem .9rem; border: 1px solid var(--felt-line); border-radius: var(--table-radius); }
-  .quiz-screen--home .hero-title { text-wrap: pretty; }
+  .quiz-screen--home .hero-title { font-size: clamp(1.88rem, 7.6vw, 2.65rem); text-wrap: pretty; }
+  .quiz-screen--home .hero-intro { margin-block-start: .6rem; }
   .quiz-screen--home .hero-visual {
     position: absolute;
     inset: 1px 1px auto;

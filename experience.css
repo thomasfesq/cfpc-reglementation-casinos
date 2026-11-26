@@ -620,7 +620,7 @@ p.journey-hero-copy { max-inline-size: 24ch; font-size: clamp(1.48rem, 3.35vw, 3
 #aide-installation .button { min-block-size: 2.75rem; }
 
 @media (orientation: landscape) and (max-height: 24rem) {
-  .quiz-screen--home .quiz-stage { grid-template-columns: minmax(0, 1fr) minmax(6.5rem, 26%); }
+  .quiz-screen--home .quiz-stage { grid-template-columns: minmax(0, 1fr) minmax(5rem, 20%); }
   .quiz-screen--home .hero-copy {
     padding: .4rem .9rem;
     border-radius: var(--table-radius) 0 0 var(--table-radius);
@@ -633,12 +633,16 @@ p.journey-hero-copy { max-inline-size: 24ch; font-size: clamp(1.48rem, 3.35vw, 3
   }
   .quiz-screen--home .hero-visual::after { border-radius: 0 .56rem .56rem 0; }
   .quiz-screen--home .hero-title { font-size: clamp(1.32rem, 3.8vw, 1.85rem); }
-  .quiz-screen--home .hero-intro { margin-block-start: .35rem; font-size: .9rem; line-height: 1.35; }
-  .quiz-screen--home .overview { margin-block-start: .55rem; column-gap: .45rem; }
+  .quiz-screen--home .hero-intro { margin-block-start: .2rem; font-size: .9rem; line-height: 1.35; }
+  .quiz-screen--home .overview { margin-block-start: .4rem; column-gap: .45rem; }
   .quiz-screen--home .stat-row { gap: .25rem; }
   .quiz-screen--home .stat-row + .stat-row { padding-inline-start: .45rem; }
   .quiz-screen--home .stat-row dt { font-size: .78rem; }
   .quiz-screen--home .stat-row dd { font-size: .82rem; }
+}
+
+@media (orientation: landscape) and (max-height: 24rem) and (min-width: 34rem) and (max-width: 64rem) {
+  .quiz-screen--home .screen-actions > .primary { grid-column: span 2; }
 }
 
 @media (forced-colors: active) {

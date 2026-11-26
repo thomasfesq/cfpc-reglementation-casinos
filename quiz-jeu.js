@@ -382,6 +382,14 @@
   }
 
   function resizeScreen(screen) {
+    if (screen.config.name === "home") {
+      if (screen.pages.length === 0) {
+        screen.pages = [wholePage(screen.config.blocks)];
+        setPage(screen, 0, false);
+      }
+      return;
+    }
+
     const active = document.activeElement;
     const pageHadFocus = screen.page.contains(active) || screen.page === active;
     const key = active?.dataset.quizFocus;
@@ -407,7 +415,7 @@
     if (!pages) {
       // A window shorter than the smallest readable fragment must still expose every control.
       document.documentElement.classList.add("quiz-compact-fallback");
-      pages = [screen.config.blocks.map((block, index) => ({index, start: 0, end: block.text?.length ?? 1}))];
+      pages = [wholePage(screen.config.blocks)];
     }
 
     screen.pages = pages;
@@ -421,6 +429,10 @@
     } else if (screen.controls.contains(active) && (screen.controls.hidden || active.disabled)) {
       focusOn(screen.page);
     }
+  }
+
+  function wholePage(blocks) {
+    return blocks.map((block, index) => ({index, start: 0, end: block.text?.length ?? 1}));
   }
 
   function progressTrack(value, total) {
@@ -445,6 +457,7 @@
 
   function showScreen(config, withFocus = true) {
     document.documentElement.classList.remove("quiz-compact-fallback");
+    document.documentElement.classList.toggle("quiz-home", config.name === "home");
     const layout = element("section", "quiz-screen quiz-screen--" + config.name +
       (config.parcours ? " quiz-parcours" : ""));
     layout.dataset.screen = config.name;
@@ -667,7 +680,7 @@
         lead.append(element("p", "eyebrow", "Prise de service"), heading);
         return lead;
       }),
-      readable("Prenez votre service. Explorez six espaces, prenez des décisions en situation et rassemblez les indices de l’enquête finale.",
+      readable("Explorez le casino et prenez les bonnes décisions pour résoudre l’enquête finale.",
         (text) => element("p", "hero-intro quiz-readable", text)),
       fixed(() => stats([
         ["Questions", questions.length],
@@ -681,7 +694,7 @@
     }
     showScreen({
       name: "home", blocks, pageClass: "hero-copy",
-      actions: [install, play, ...(notebookAvailable ? [carnet] : []), ...(atelier ? [mini] : []), browse, quick, reflex],
+      actions: [play, ...(notebookAvailable ? [carnet] : []), install, ...(atelier ? [mini] : []), quick, browse, reflex],
       decorate(stage) {
         const picture = element("div", "hero-visual");
         const photo = element("img", "hero-photo");
