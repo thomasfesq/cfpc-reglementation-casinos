@@ -160,7 +160,7 @@
       (value.draft === null || (value.answers[value.position] === null && validOption(value.draft, value.position)));
   }
 
-  function saveAttempt(change, afterSave) {
+  function saveAttempt(change, afterSave = () => {}) {
     const previous = attempt;
     function commit() {
       if (attempt !== previous) return;
@@ -382,7 +382,7 @@
   }
 
   function resizeScreen(screen) {
-    if (screen.config.name === "home") {
+    if (screen.scrolls) {
       if (screen.pages.length === 0) {
         screen.pages = [wholePage(screen.config.blocks)];
         setPage(screen, 0, false);
@@ -456,10 +456,13 @@
   }
 
   function showScreen(config, withFocus = true) {
+    const decisionFlow = Boolean(config.progress || (config.submit && config.questionLabel));
+    const scrolls = config.name === "home" || decisionFlow;
     document.documentElement.classList.remove("quiz-compact-fallback");
     document.documentElement.classList.toggle("quiz-home", config.name === "home");
+    document.documentElement.classList.toggle("quiz-decision", decisionFlow);
     const layout = element("section", "quiz-screen quiz-screen--" + config.name +
-      (config.parcours ? " quiz-parcours" : ""));
+      (config.parcours ? " quiz-parcours" : "") + (decisionFlow ? " quiz-screen--decision" : ""));
     layout.dataset.screen = config.name;
     const header = element("header", "quiz-screen-head" + (config.state ? " is-" + config.state : ""));
     let heading;
@@ -475,7 +478,8 @@
       location.append(heading);
       header.append(location);
     }
-    if (config.progress) header.append(progressTrack(countAnswered(), questions.length));
+    const progress = config.progress ? progressTrack(countAnswered(), questions.length) : null;
+    if (progress && !decisionFlow) header.append(progress);
     if (config.steps !== undefined) header.append(journeySteps(config.steps));
 
     const stage = element(config.submit ? "form" : "div", "quiz-stage");
@@ -496,7 +500,7 @@
     const controls = element("nav", "page-buttons");
     controls.setAttribute("aria-label", "Pages de cet écran");
     const counter = element("span", "page-counter");
-    const screen = {config, stage, page, controls, counter, pages: [], index: 0};
+    const screen = {config, stage, page, controls, counter, scrolls, pages: [], index: 0};
     const turn = (direction) => setPage(screen, screen.index + direction, true);
     screen.previous = button("", "secondary page-turn", () => turn(-1));
     screen.previous.setAttribute("aria-label", "Page précédente");
@@ -516,15 +520,27 @@
       navigation.append(actions);
     }
 
-    layout.append(header, stage, navigation);
+    layout.append(header);
+    if (progress && decisionFlow) layout.append(progress);
+    layout.append(stage, navigation);
     main.replaceChildren(layout);
     currentScreen = screen;
+    if (decisionFlow) window.scrollTo({top: 0, left: 0, behavior: "instant"});
     resizeScreen(screen);
     if (withFocus) {
       const target = (config.focusPrompt && screen.page.querySelector(".question")) ||
         heading || screen.page.querySelector("h1") || screen.page;
       target.tabIndex = -1;
       focusOn(target);
+      if (decisionFlow && config.submit) {
+        const bounds = target.getBoundingClientRect();
+        const scoreBounds = progress?.getBoundingClientRect();
+        const actionTop = Math.min(window.innerHeight, navigation.getBoundingClientRect().top);
+        if (bounds.bottom > actionTop || bounds.top < (scoreBounds?.bottom ?? 0)) {
+          const readingTop = (scoreBounds?.height ?? 0) + 6;
+          window.scrollBy({top: bounds.top - readingTop, behavior: "instant"});
+        }
+      }
     }
     if (config.reveal) {
       const pageIndex = screen.pages.findIndex((parts) => parts.some(({index}) => config.blocks[index].key === config.reveal));
@@ -964,15 +980,6 @@
       blocks: [sceneBlock(index), dialogue(scene.speaker, scene.line)], actions: [decide]});
   }
 
-  function syncSelection(validate, input, index) {
-    if (!validate.isConnected) return;
-    validate.disabled = false;
-    if (!input.isConnected) {
-      const replacement = currentScreen.page.querySelector('input[data-quiz-focus="option-' + index + '"]');
-      if (replacement) replacement.checked = true;
-    }
-  }
-
   function startPractice(queue) {
     const journey = attempt.journey;
     saveAttempt(() => {
@@ -1166,11 +1173,11 @@
     });
   }
 
-  function showChoiceReaction({question, imageIndex, choice, variant = false, back, next, quick = false}) {
+  function showChoiceReaction({question, imageIndex, choice, variant = false, back, next, quick = false, progress = false}) {
     const reaction = terrain.reactions[question.id];
     const line = reaction[variant ? "variant" : "standard"][choice];
     showScreen({name: quick ? "quick-reaction" : "reaction", title: "La scène continue", context: question.theme,
-      back, blocks: [reactionBlock(imageIndex, reaction.speaker, line)],
+      back, progress, blocks: [reactionBlock(imageIndex, reaction.speaker, line)],
       actions: [iconButton("Voir la correction", "primary", "arrow-right", next)]});
   }
 
@@ -1379,8 +1386,9 @@
     validate.prepend(icon("check"));
     const options = optionBlocks(question, null, {
       selected: draft,
-      pick(choice, input) {
-        saveAttempt(() => pick(choice), () => syncSelection(validate, input, choice));
+      pick(choice) {
+        validate.disabled = false;
+        saveAttempt(() => pick(choice));
       },
     });
     showScreen({...screen, parcours: true, steps: 1, focusPrompt: true,
@@ -1742,24 +1750,6 @@
     return key;
   }
 
-  function adjacentOption(event, index, count) {
-    if (event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
-    const direction = {ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1}[event.key];
-    if (!direction) return;
-    const key = "option-" + ((index + direction + count) % count);
-    const screen = currentScreen;
-    if (screen.page.querySelector(`input[data-quiz-focus="${key}"]`)) return;
-    const destination = screen.pages.findIndex((page) => page.some((fragment) =>
-      screen.config.blocks[fragment.index].key === key));
-    if (destination < 0) return;
-
-    event.preventDefault();
-    setPage(screen, destination, false);
-    const input = screen.page.querySelector(`input[data-quiz-focus="${key}"]`);
-    focusOn(input);
-    input?.click();
-  }
-
   function optionBlocks(question, choice, controls) {
     return question.options.map((label, index) => {
       const key = "option-" + index;
@@ -1782,11 +1772,13 @@
           input.value = String(index);
           input.checked = controls.selected() === index;
           input.dataset.quizFocus = key;
-          input.addEventListener("keydown", (event) => adjacentOption(event, index, question.options.length));
+          input.addEventListener("focus", () => {
+            option.scrollIntoView({block: "nearest", inline: "nearest"});
+          });
           if (continued || text !== label) input.setAttribute("aria-label", label);
           input.addEventListener("change", () => {
             if (!input.checked) return;
-            controls.pick(index, input);
+            controls.pick(index);
           });
           option.append(input);
         }
@@ -1843,11 +1835,12 @@
       questionLabel: question.question, choiceCount: question.options.length,
       blocks: [promptBlock(question), ...optionBlocks(question, choice, {
         selected: () => attempt.draft,
-        pick(selected, input) {
+        pick(selected) {
+          validate.disabled = false;
           saveAttempt(() => {
             if (attempt.position !== index || attempt.answers[index] !== null) return false;
             attempt.draft = selected;
-          }, () => syncSelection(validate, input, selected));
+          });
         },
       })], actions: [validate],
       reveal: restoreDraft && attempt.draft !== null ? "option-" + attempt.draft : null,
@@ -1868,7 +1861,7 @@
     const service = attempt;
     const unseen = service.journey.unseenReactions;
     if (unseen.includes(index)) {
-      return showChoiceReaction({question, imageIndex: index, choice, back: mapAction(), next() {
+      return showChoiceReaction({question, imageIndex: index, choice, back: mapAction(), progress: true, next() {
         saveAttempt(() => {
           const pending = service.journey.unseenReactions;
           if (attempt !== service || attempt.position !== index || !pending.includes(index)) return false;

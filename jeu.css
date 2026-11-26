@@ -203,10 +203,68 @@ body {
 .screen-actions { justify-content: end; margin-inline-start: auto; }
 
 /* Ouverture du parcours. La photo locale donne son repère à la table. */
-.quiz-home body {
+:is(.quiz-home, .quiz-decision) body {
   block-size: auto;
   min-block-size: 100dvh;
   grid-template-rows: auto minmax(min-content, 1fr) auto;
+}
+
+.quiz-screen--decision {
+  block-size: auto;
+  min-block-size: 100%;
+  grid-template-rows: auto minmax(min-content, 1fr) auto;
+}
+
+.quiz-screen--decision:has(> .score-track) {
+  grid-template-rows: auto auto minmax(min-content, 1fr) auto;
+}
+
+.quiz-screen--decision > .score-track {
+  grid-template-columns: minmax(0, auto) minmax(2rem, 1fr);
+  align-items: center;
+  inline-size: 100%;
+  padding: .55rem .7rem;
+  border: 1px solid var(--felt-line);
+  border-radius: var(--card-radius);
+  background: var(--felt-deep);
+}
+
+.quiz-screen--decision > .score-track .chip-list { display: none; }
+
+.quiz-screen--decision > .page-nav {
+  margin-inline: -.25rem;
+  padding: .4rem .25rem max(.4rem, env(safe-area-inset-bottom));
+  border-radius: var(--card-radius);
+  background: var(--felt-deep);
+}
+
+.quiz-screen--decision > .page-nav .button { min-block-size: 44px; }
+
+@media (max-width: 35rem) {
+  .quiz-screen--decision > .page-nav .screen-actions { inline-size: 100%; }
+  .quiz-screen--decision > .page-nav .button { flex: 1; justify-content: center; }
+}
+
+@media (min-height: 11.5rem) {
+  .quiz-decision { scroll-padding-block: 3rem 4.25rem; }
+
+  .quiz-screen--decision > .score-track {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 2;
+  }
+
+  .quiz-screen--decision:has(> form) > .page-nav {
+    position: sticky;
+    inset-block-end: 0;
+    z-index: 2;
+  }
+}
+
+@media (min-height: 11.5rem) and (max-height: 15rem) {
+  .quiz-decision { scroll-padding-block: 2.25rem 3.3rem; }
+  .quiz-screen--decision > .score-track { padding-block: .35rem; }
+  .quiz-screen--decision > .page-nav { padding-block: .2rem max(.2rem, env(safe-area-inset-bottom)); }
 }
 
 .quiz-screen--home {
