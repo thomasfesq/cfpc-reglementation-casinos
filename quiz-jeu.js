@@ -101,9 +101,11 @@
   let express = null;
   let expressFromGames = false;
   let attempt = recover(readRecord());
+  let pendingDraftWrites = 0;
+  const pendingDraftChoices = new WeakMap();
 
   function updateStorageStatus() {
-    const status = restoredFromAnotherWindow
+    const status = pendingDraftWrites ? "Enregistrement de la réponse…" : restoredFromAnotherWindow
       ? "Progression récupérée depuis l’autre fenêtre"
       : saved ? "Progression enregistrée sur cet appareil" : "Progression conservée pendant cette session";
     if (storageStatus.textContent !== status) storageStatus.textContent = status;
@@ -192,18 +194,49 @@
     // The comparison and write share one lock across tabs and installed windows.
     // Without Web Locks, the comparison still catches an already committed change.
     const locks = navigator.locks;
-    if (!locks) {
-      commit();
-      return;
-    }
+    if (!locks) return commit();
     let started = false;
-    locks.request(storageKey, () => {
+    return locks.request(storageKey, () => {
       started = true;
       commit();
     }).catch((error) => {
       if (!started) commit();
       else console.error(error);
     });
+  }
+
+  function refreshDraftControls() {
+    const screen = currentScreen;
+    if (!screen?.config.draft) return;
+    const {draft, validate} = screen.config;
+    const selected = draft();
+    validate.disabled = pendingDraftWrites > 0 || selected === null;
+    for (const input of screen.stage.querySelectorAll('input[name="reponse"]')) {
+      input.checked = selected === Number(input.value);
+    }
+  }
+
+  function selectedDraft(owner, position, persistedDraft) {
+    return () => {
+      const pending = pendingDraftChoices.get(owner);
+      return pending?.position === position ? pending.choice : persistedDraft();
+    };
+  }
+
+  async function saveDraft(owner, position, choice, change) {
+    const pending = {position, choice};
+    pendingDraftChoices.set(owner, pending);
+    pendingDraftWrites += 1;
+    updateStorageStatus();
+    refreshDraftControls();
+    try {
+      await saveAttempt(change);
+    } finally {
+      if (pendingDraftChoices.get(owner) === pending) pendingDraftChoices.delete(owner);
+      pendingDraftWrites -= 1;
+      updateStorageStatus();
+      refreshDraftControls();
+    }
   }
 
   function countAnswered() {
@@ -488,7 +521,7 @@
       stage.setAttribute("aria-label", "Choisir une réponse");
       stage.addEventListener("submit", (event) => {
         event.preventDefault();
-        config.submit();
+        if (!pendingDraftWrites) config.submit();
       });
     }
     const page = makePage(config);
@@ -1378,24 +1411,22 @@
       }});
   }
 
-  function showActivityQuestion(question, {draft, pick, submit, ...screen}) {
+  function showActivityQuestion(question, {owner, position, persistedDraft, pick, submit, ...screen}) {
+    const draft = selectedDraft(owner, position, persistedDraft);
     const validate = element("button", "button primary", "Valider la réponse");
     validate.type = "submit";
     validate.setAttribute("form", "formulaire-reponse");
-    validate.disabled = draft() === null;
+    validate.disabled = pendingDraftWrites > 0 || draft() === null;
     validate.prepend(icon("check"));
     const options = optionBlocks(question, null, {
       selected: draft,
-      pick(choice) {
-        validate.disabled = false;
-        saveAttempt(() => pick(choice));
-      },
+      pick: (choice) => saveDraft(owner, position, choice, () => pick(choice)),
     });
     showScreen({...screen, parcours: true, steps: 1, focusPrompt: true,
       questionLabel: question.question, choiceCount: question.options.length,
       blocks: [promptBlock(question), ...options], actions: [validate],
       reveal: draft() !== null ? "option-" + draft() : null,
-      submit});
+      draft, validate, submit});
   }
 
   function showActivity() {
@@ -1446,7 +1477,7 @@
     }
     showActivityQuestion(question, {
       name: practice ? "practice" : "investigation", title, context, back,
-      draft: () => activity.draft,
+      owner: activity, position: cursor, persistedDraft: () => activity.draft,
       pick(choice) {
         if (!isCurrent() || activity.revealed) return false;
         activity.draft = choice;
@@ -1521,7 +1552,7 @@
 
     showActivityQuestion(question, {
       name: "quick-question", title: "Relève express", context, back,
-      draft: () => run.draft,
+      owner: run, position: cursor, persistedDraft: () => run.draft,
       pick(value) {
         if (!current("question")) return false;
         run.draft = value;
@@ -1816,7 +1847,8 @@
   }
 
   function showQuestion(restoreDraft = false) {
-    const index = attempt.position;
+    const service = attempt;
+    const index = service.position;
     const question = questions[index];
     const choice = attempt.answers[index];
     const context = "Question " + (index + 1) + " sur " + questions.length;
@@ -1828,22 +1860,21 @@
     const validate = element("button", "button primary", "Valider la réponse");
     validate.type = "submit";
     validate.setAttribute("form", "formulaire-reponse");
-    validate.disabled = attempt.draft === null;
+    const draft = selectedDraft(service, index, () => service.draft);
+    validate.disabled = pendingDraftWrites > 0 || draft() === null;
     validate.prepend(icon("check"));
     showScreen({
       name: "question", parcours: true, title: context, back: mapAction(), progress: true, focusPrompt: true, steps: 1,
       questionLabel: question.question, choiceCount: question.options.length,
       blocks: [promptBlock(question), ...optionBlocks(question, choice, {
-        selected: () => attempt.draft,
-        pick(selected) {
-          validate.disabled = false;
-          saveAttempt(() => {
-            if (attempt.position !== index || attempt.answers[index] !== null) return false;
-            attempt.draft = selected;
-          });
-        },
+        selected: draft,
+        pick: (selected) => saveDraft(service, index, selected, () => {
+          if (attempt.position !== index || attempt.answers[index] !== null) return false;
+          attempt.draft = selected;
+        }),
       })], actions: [validate],
-      reveal: restoreDraft && attempt.draft !== null ? "option-" + attempt.draft : null,
+      reveal: restoreDraft && draft() !== null ? "option-" + draft() : null,
+      draft, validate,
       submit() {
         saveAttempt(() => {
           if (attempt.position !== index || attempt.draft === null || attempt.answers[index] !== null) return false;
